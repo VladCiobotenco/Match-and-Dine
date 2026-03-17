@@ -169,7 +169,7 @@
   &::after {
     content: '';
     position: absolute;
-    top: -4.5px;
+    top: -4.51px;
     border: 5px solid transparent;
   }
 
