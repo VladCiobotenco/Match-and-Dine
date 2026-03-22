@@ -49,6 +49,7 @@
 /* Inputs */
 .input-group input[type="email"],
 .input-group input[type="password"],
+.input-group input[type="tel"],
 .input-group input[type="text"] {
   width: 100%;
   padding: 16px 20px;
