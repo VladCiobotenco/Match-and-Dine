@@ -50,6 +50,6 @@ After the setup is complete, you must activate the virtual environment before ru
     In a **new terminal**, navigate to the frontend directory and start its development server.
     ```shell
     cd core/frontend
-    npm start
+    npm run dev
     ```
     The frontend will be accessible in your browser (check the terminal output for the exact URL, usually `http://localhost:3000`).
