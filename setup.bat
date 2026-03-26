@@ -26,9 +26,13 @@ if %errorlevel% neq 0 (
 )
 
 REM 5. Install frontend dependencies
-if exist "core\frontend" (
+if exist "core\frontend\package.json" (
     echo --- Installing frontend dependencies ---
-    pushd core\frontend && npm install && popd
+    pushd core\frontend
+    call npm install
+    popd
+) else (
+    echo Warning: 'core\frontend\package.json' not found. Skipping npm install.
 )
 
 echo --- Setup complete! ---

@@ -25,17 +25,28 @@ function Login() {
     setIsLoading(true);
 
     try {
-      // TODO: Replace with fetch when backend ready
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      
       const payload = { 
         email: email.trim().toLowerCase(), 
         password, 
-        rememberMe 
       };
-      console.log("Login payload:", payload);
 
-      // TODO: Save JWT token and redirect to /home
+      const response = await fetch('http://127.0.0.1:8000/api/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log("Login successful:", data);
+        // TODO: Redirect user (e.g., using React Router's useNavigate hook)
+        // navigate('/home');
+      } else {
+        setError(data.error || 'A apărut o eroare la conectare.');
+      }
     } catch (err) {
       setError('A apărut o eroare la conectare. Încearcă din nou.');
       console.error('Login error:', err);
