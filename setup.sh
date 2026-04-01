@@ -27,10 +27,10 @@ fi
 
 # 5. Install frontend dependencies
 echo "--- Installing frontend dependencies ---"
-if [ -d "core/frontend" ]; then
+if [ -f "core/frontend/package.json" ]; then
     (cd core/frontend && npm install)
 else
-    echo "Warning: 'core/frontend' directory not found. Skipping npm install."
+    echo "Warning: 'core/frontend/package.json' not found. Skipping npm install."
 fi
 
 echo "--- Setup complete! ---"
