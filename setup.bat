@@ -19,7 +19,7 @@ echo --- Installing Python dependencies from requirements.txt ---
 call venv\Scripts\pip.exe install -r requirements.txt
 
 REM 4. Check for Node.js and npm
-npm --version >nul 2>nul
+call npm --version >nul 2>nul
 if %errorlevel% neq 0 (
     echo npm could not be found. Please install Node.js and ensure it's in your PATH.
     exit /b 1
