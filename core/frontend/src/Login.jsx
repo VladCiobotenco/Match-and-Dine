@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom'; // Am adăugat importurile pentru rutare
 import './App.css';
 
 function Login() {
+  const navigate = useNavigate(); // Am inițializat ofițerul de trafic
+
   // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,8 +45,8 @@ function Login() {
 
       if (response.ok) {
         console.log("Login successful:", data);
-        // TODO: Redirect user (e.g., using React Router's useNavigate hook)
-        // navigate('/home');
+        // Am activat navigarea automată către Home!
+        navigate('/home');
       } else {
         setError(data.error || 'A apărut o eroare la conectare.');
       }
@@ -113,8 +116,8 @@ function Login() {
         </div>
 
         <div className="forgot-password">
-          {/* TODO: Add React Router Link */}
-          <a href="/forgot-password">Ai uitat parola?</a>
+          {/* Folosim Link în loc de ancoră HTML */}
+          <Link to="/forgot-password">Ai uitat parola?</Link>
         </div>
 
         <button type="submit" className="login-button" disabled={isLoading}>
@@ -122,8 +125,8 @@ function Login() {
         </button>
 
         <div className="register-link">
-          {/* TODO: Add React Router Link */}
-          Nu ai cont? <a href="/register">Înregistrează-te</a>
+          {/* Folosim Link în loc de ancoră HTML */}
+          Nu ai cont? <Link to="/register">Înregistrează-te</Link>
         </div>
 
       </form>
