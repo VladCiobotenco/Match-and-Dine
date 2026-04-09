@@ -45,10 +45,27 @@ function Register() {
     setIsLoading(true);
 
     try {
-      // TODO: Replace with actual POST /api/register
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Register payload:", formData);
-      navigate('/register-success');
+      const response = await fetch('http://localhost:8000/api/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nume: formData.nume,
+          prenume: formData.prenume,
+          email: formData.email,
+          telefon: formData.telefon,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        navigate('/register-success');
+      } else {
+        setError(data.error || 'Eroare la crearea contului. Încearcă din nou.');
+      }
     } catch (err) {
       setError('Eroare la crearea contului. Încearcă din nou.');
     } finally {
