@@ -11,7 +11,9 @@ function RegisterRestaurant() {
     cui: '',
     adresa: '',
     specific: '',
-    telefonContact: ''
+    telefonContact: '',
+    descriere: '',
+    rating: ''
   });
   
   // UI state
@@ -29,13 +31,24 @@ function RegisterRestaurant() {
     setIsLoading(true);
 
     try {
-      // TODO: Implement POST /api/register-restaurant/
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log("Restaurant payload:", formData);
-      navigate('/dashboard'); 
+      const response = await fetch('http://localhost:8000/api/register-restaurant/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log("Restaurant created:", data);
+        navigate('/dashboard'); 
+      } else {
+        setError(data.error || 'A apărut o eroare la înregistrare.');
+      }
     } catch (err) {
-      setError('A apărut o eroare. Încearcă din nou.');
+      setError('Eroare de conexiune cu serverul. Încearcă din nou.');
       console.error('Restaurant registration error:', err);
     } finally {
       setIsLoading(false);
@@ -75,6 +88,16 @@ function RegisterRestaurant() {
             <input id="telefonContact" name="telefonContact" type="tel" placeholder="07xx xxx xxx" value={formData.telefonContact} onChange={handleChange} />
           </div>
         </div>
+
+      <div className="input-group">
+        <label htmlFor="descriere">Descriere</label>
+        <textarea id="descriere" name="descriere" placeholder="Câteva cuvinte despre restaurantul tău..." value={formData.descriere} onChange={handleChange} rows="3" />
+      </div>
+
+      <div className="input-group">
+        <label htmlFor="rating">Rating</label>
+        <input id="rating" name="rating" type="number" step="0.1" min="0" max="5" placeholder="Ex: 4.5" value={formData.rating} onChange={handleChange} />
+      </div>
 
         <button type="submit" className="login-button" disabled={isLoading} style={{ marginTop: '20px' }}>
           {isLoading ? 'Se configurează...' : 'Creează Dashboard-ul'}
