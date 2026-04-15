@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.db import IntegrityError
-from .models import UserProfile
+from .models import UserProfile, Restaurant
 
 @csrf_exempt # In production, you should use CSRF tokens or JWT instead of this decorator
 def api_login(request):
@@ -26,6 +26,45 @@ def api_login(request):
                 return JsonResponse({'message': 'Login successful', 'email': user.email})
             else:
                 return JsonResponse({'error': 'Adresa de email sau parola incorecta'}, status=401)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+@csrf_exempt # In production, you should use CSRF tokens or JWT instead of this decorator
+def api_register_restaurant(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            nume = data.get('numeRestaurant', '').strip()
+            adresa = data.get('adresa', '').strip()
+            telefon = data.get('telefonContact', '').strip()
+            descriere = data.get('descriere', '').strip()
+            rating_str = data.get('rating', '0')
+            
+            if not nume or not adresa:
+                return JsonResponse({'error': 'Numele și adresa sunt obligatorii'}, status=400)
+                
+            try:
+                rating = float(rating_str) if rating_str else 0.0
+            except ValueError:
+                rating = 0.0
+
+            # Create a placeholder email for contact since it's required by the model and missing in the form
+            cui = data.get('cui', '').strip()
+            dummy_email = f"contact_{cui}@example.com" if cui else f"contact_{nume.replace(' ', '').lower()}@example.com"
+
+            restaurant = Restaurant.objects.create(
+                nume=nume,
+                adresa=adresa,
+                telefon_contact=telefon if telefon else None,
+                descriere=descriere if descriere else None,
+                rating=rating,
+                email_contact=dummy_email
+            )
+            return JsonResponse({'message': 'Restaurant înregistrat cu succes', 'id': restaurant.id})
+
+        except IntegrityError:
+            return JsonResponse({'error': 'Eroare la salvare. Posibil duplicat (adresa de email generata exista deja).'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
