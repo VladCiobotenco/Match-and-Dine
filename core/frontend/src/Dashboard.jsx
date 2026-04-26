@@ -6,75 +6,101 @@ function Dashboard() {
   // UI state
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   
   // Data state
   const [restaurantData, setRestaurantData] = useState(null);
+  const [menuItems, setMenuItems] = useState([]);
+  const [reservations, setReservations] = useState([]);
   
-  // Mock data state (TODO: Remove after API integration)
-  const [menuItems, setMenuItems] = useState([
-    { id: 1, nume: 'Paste Carbonara', pret: 45, categorie: 'Fel principal' },
-    { id: 2, nume: 'Tiramisu', pret: 25, categorie: 'Desert' }
-  ]);
+  // Forms state
   const [showAddForm, setShowAddForm] = useState(false);
   const [newDish, setNewDish] = useState({ nume: '', pret: '', categorie: '' });
 
-  const [reservations, setReservations] = useState([
-    { id: 1, numeClient: 'Popescu Ion', data: 'Azi, 19:30', persoane: 2, status: 'Așteptare' },
-    { id: 2, numeClient: 'Maria Ionescu', data: 'Azi, 20:00', persoane: 4, status: 'Confirmat' }
-  ]);
+  // --- API FETCHERS ---
 
-  // Handlers
-  const handleAddDish = (e) => {
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      // 1. Luăm statisticile generale
+      const statsRes = await fetch('http://127.0.0.1:8000/api/dashboard-stats/');
+      const statsData = await statsRes.json();
+      
+      // 2. Luăm meniul
+      const menuRes = await fetch('http://127.0.0.1:8000/api/menu/');
+      const menuData = await menuRes.json();
+      
+      // 3. Luăm rezervările
+      const resRes = await fetch('http://127.0.0.1:8000/api/reservations/');
+      const resData = await resRes.json();
+
+      setRestaurantData(statsData);
+      setMenuItems(menuData);
+      setReservations(resData);
+    } catch (err) {
+      console.error("Dashboard error:", err);
+      setError("Nu s-au putut încărca datele de pe server.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // --- HANDLERS ---
+
+  const handleAddDish = async (e) => {
     e.preventDefault();
     if (!newDish.nume || !newDish.pret) return;
 
-    // TODO: Implement POST /api/menu
-    const itemNou = { 
-      id: Date.now(),
-      nume: newDish.nume, 
-      pret: Number(newDish.pret), 
-      categorie: newDish.categorie || 'General'
-    };
-    
-    setMenuItems([...menuItems, itemNou]);
-    setNewDish({ nume: '', pret: '', categorie: '' });
-    setShowAddForm(false);
-  };
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/menu/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newDish),
+      });
 
-  const handleDeleteDish = (id) => {
-    // TODO: Implement DELETE /api/menu/:id
-    setMenuItems(menuItems.filter(item => item.id !== id));
-  };
-
-  const handleUpdateReservation = (id, newStatus) => {
-    // TODO: Implement PATCH /api/reservations/:id
-    setReservations(reservations.map(res => 
-      res.id === id ? { ...res, status: newStatus } : res
-    ));
-  };
-
-  // Lifecycle
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        // TODO: Replace with actual fetch
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setRestaurantData({ 
-          nume: "Restaurantul Meu", 
-          views: 342, 
-          matches: 85, 
-          reservations: reservations.length 
-        });
-      } catch (error) {
-        console.error("Dashboard fetch error:", error);
-      } finally {
-        setIsLoading(false);
+      if (response.ok) {
+        setNewDish({ nume: '', pret: '', categorie: '' });
+        setShowAddForm(false);
+        fetchData(); // Reîmprospătăm lista
       }
-    };
-    fetchDashboardData();
-  }, [reservations.length]); // Added dependency to update reservations count
+    } catch (err) {
+      console.error("Error adding dish:", err);
+    }
+  };
+
+  const handleDeleteDish = async (id) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/menu/${id}/`, {
+        method: 'DELETE',
+      });
+      if (response.ok) fetchData();
+    } catch (err) {
+      console.error("Error deleting dish:", err);
+    }
+  };
+
+  const handleUpdateReservation = async (id, newStatus) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/reservations/${id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (response.ok) fetchData();
+    } catch (err) {
+      console.error("Error updating reservation:", err);
+    }
+  };
+
+  // --- RENDER HELPERS ---
 
   const renderContent = () => {
+    if (error) return <div className="error-message">{error}</div>;
+
     switch (activeTab) {
       case 'overview':
         return (
@@ -95,7 +121,7 @@ function Dashboard() {
             </div>
             <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '30px' }}>
               <h2>Activitate Recentă</h2>
-              <p style={{ color: '#666', marginTop: '10px' }}>Sistemul este activ. Așteptăm noi interacțiuni de la clienți!</p>
+              <p style={{ color: '#666', marginTop: '10px' }}>Serverul este conectat. Ai {menuItems.length} produse în meniu.</p>
             </div>
           </>
         );
@@ -152,9 +178,8 @@ function Dashboard() {
         return (
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '30px' }}>
             <h2>📅 Rezervările Mele</h2>
-            <p style={{ color: '#666', marginBottom: '20px' }}>Gestionează cererile primite de la clienți.</p>
-            
-            <div>
+            <div style={{ marginTop: '10px' }}>
+              {reservations.length === 0 ? <p>Nu ai nicio rezervare momentan.</p> : null}
               {reservations.map((res) => (
                 <div key={res.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', border: '1px solid #E5E5E5', borderRadius: '15px', marginBottom: '15px' }}>
                   <div>
@@ -189,7 +214,7 @@ function Dashboard() {
     }
   };
 
-  if (isLoading) return <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center' }}>Se încarcă datele restaurantului...</div>;
+  if (isLoading) return <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center' }}>Se conectează la baza de date...</div>;
 
   return (
     <div className="dashboard-layout">
@@ -209,7 +234,7 @@ function Dashboard() {
         <header className="dashboard-header">
           <div>
             <h1>Salutare, {restaurantData?.nume}! 👋</h1>
-            <p style={{ color: '#666666', marginTop: '5px' }}>Gestionează-ți restaurantul eficient.</p>
+            <p style={{ color: '#666666', marginTop: '5px' }}>Datele tale sunt acum sincronizate în timp real.</p>
           </div>
         </header>
         {renderContent()}

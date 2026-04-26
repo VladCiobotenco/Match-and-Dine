@@ -51,7 +51,8 @@
 .input-group input[type="password"],
 .input-group input[type="tel"],
 .input-group input[type="text"],
-.input-group input[type="number"] {
+.input-group input[type="number"],
+.input-group textarea {
   width: 100%;
   padding: 16px 20px;
   border: 1px solid #E5E5E5;
@@ -60,8 +61,16 @@
   color: #1A1A1A;
   outline: none;
   font-size: 1rem;
+  font-family: inherit; 
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+
+.input-group textarea {
+  border-radius: 20px;
+  resize: vertical;
+  min-height: 100px;
 }
 
 .input-group input:focus {
@@ -254,4 +263,61 @@
   font-size: 2.5rem;
   font-weight: bold;
   color: #1A1A1A;
+}
+
+/* --- GLOBAL NAVBAR --- */
+.global-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 40px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E5E5E5;
+  position: fixed; /* O ținem lipită sus */
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+
+.navbar-brand {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #E2001A;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+}
+
+.navbar-links a {
+  text-decoration: none;
+  color: #666666;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+
+.navbar-links a:hover, .navbar-links a.active {
+  color: #E2001A;
+}
+
+.navbar-links a.logout-btn {
+  background-color: #FFF3F4;
+  color: #E2001A;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.navbar-links a.logout-btn:hover {
+  background-color: #FFE6E8;
+}
+
+/* Compensăm spațiul ocupat de navbar-ul fix, ca să nu ne acopere conținutul paginilor */
+.home-layout, .dashboard-layout {
+  padding-top: 70px; 
 }
