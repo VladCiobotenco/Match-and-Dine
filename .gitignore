@@ -33,3 +33,6 @@ yarn-error.log*
 # Environment variables
 .env
 *.env
+
+__pycache__/
+*.pyc
