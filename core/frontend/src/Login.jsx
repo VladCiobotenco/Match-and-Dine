@@ -41,6 +41,7 @@ function Login() {
       if (response.ok) {
         console.log("Login successful:", data);
         // SALVĂM STAREA DE OWNER ÎN MEMORIE
+        localStorage.setItem('token', data.token);
         localStorage.setItem('isOwner', data.isOwner);
         localStorage.setItem('userEmail', data.email);
         navigate('/home');

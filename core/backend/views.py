@@ -1,11 +1,23 @@
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db import IntegrityError
+from django.core import signing
 from .models import UserProfile, Restaurant, MenuItem, Reservation
 from datetime import datetime
+
+def get_user_from_token(request):
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+        try:
+            data = signing.loads(token, max_age=86400) # 1 day expiration
+            return User.objects.get(id=data['user_id'])
+        except (signing.BadSignature, signing.SignatureExpired, User.DoesNotExist):
+            return None
+    return None
 
 @csrf_exempt
 def api_login(request):
@@ -22,13 +34,14 @@ def api_login(request):
                 user = None
 
             if user is not None:
-                login(request, user)
+                token = signing.dumps({'user_id': user.id})
                 # Verificăm strict dacă ACEST user are un restaurant înregistrat
                 is_owner = Restaurant.objects.filter(owner=user).exists()
                 return JsonResponse({
                     'message': 'Login successful', 
                     'email': user.email,
-                    'isOwner': is_owner
+                    'isOwner': is_owner,
+                    'token': token
                 })
             else:
                 return JsonResponse({'error': 'Adresa de email sau parola incorecta'}, status=401)
@@ -39,7 +52,8 @@ def api_login(request):
 @csrf_exempt
 def api_register_restaurant(request):
     if request.method == 'POST':
-        if not request.user.is_authenticated:
+        user = get_user_from_token(request)
+        if not user:
             return JsonResponse({'error': 'Trebuie să fii logat pentru a înregistra un restaurant'}, status=401)
 
         try:
@@ -56,11 +70,11 @@ def api_register_restaurant(request):
             dummy_email = f"contact_{cui}@example.com" if cui else f"contact_{nume.replace(' ', '').lower()}@example.com"
 
             # Verificăm dacă userul are deja un restaurant legat de el
-            if Restaurant.objects.filter(owner=request.user).exists():
+            if Restaurant.objects.filter(owner=user).exists():
                 return JsonResponse({'error': 'Ai deja un restaurant înregistrat pe acest cont'}, status=400)
 
             restaurant = Restaurant.objects.create(
-                owner=request.user,
+                owner=user,
                 nume=nume,
                 adresa=adresa,
                 telefon_contact=telefon if telefon else None,
@@ -154,7 +168,14 @@ def api_register(request):
             user = User.objects.create_user(username=email, email=email, password=password, first_name=prenume, last_name=nume)
             UserProfile.objects.create(user=user, nume=nume, prenume=prenume, email=email, telefon=telefon if telefon else None)
 
-            return JsonResponse({'message': 'Cont creat cu succes', 'email': user.email})
+            # Generăm token-ul pentru a loga utilizatorul automat după înregistrare
+            token = signing.dumps({'user_id': user.id})
+            return JsonResponse({
+                'message': 'Cont creat cu succes', 
+                'email': user.email,
+                'token': token,
+                'isOwner': False
+            })
 
         except IntegrityError:
             return JsonResponse({'error': 'Adresa de email este deja înregistrată'}, status=400)
@@ -191,11 +212,12 @@ def api_get_restaurant_details(request, pk):
 
 @csrf_exempt
 def api_dashboard_stats(request):
-    if not request.user.is_authenticated:
+    user = get_user_from_token(request)
+    if not user:
         return JsonResponse({'error': 'Neautorizat'}, status=401)
         
     # Extragem DOAR restaurantul utilizatorului logat
-    restaurant = Restaurant.objects.filter(owner=request.user).first()
+    restaurant = Restaurant.objects.filter(owner=user).first()
     if not restaurant:
         return JsonResponse({'error': 'Nu detii un restaurant.'}, status=403)
         
@@ -209,10 +231,11 @@ def api_dashboard_stats(request):
 
 @csrf_exempt
 def api_menu(request):
-    if not request.user.is_authenticated:
+    user = get_user_from_token(request)
+    if not user:
         return JsonResponse({'error': 'Neautorizat'}, status=401)
         
-    restaurant = Restaurant.objects.filter(owner=request.user).first()
+    restaurant = Restaurant.objects.filter(owner=user).first()
     if not restaurant:
         return JsonResponse({'error': 'Nu detii un restaurant.'}, status=403)
 
@@ -247,10 +270,11 @@ def api_menu_detail(request, item_id):
 
 @csrf_exempt
 def api_reservations(request):
-    if not request.user.is_authenticated:
+    user = get_user_from_token(request)
+    if not user:
         return JsonResponse({'error': 'Neautorizat'}, status=401)
         
-    restaurant = Restaurant.objects.filter(owner=request.user).first()
+    restaurant = Restaurant.objects.filter(owner=user).first()
     if not restaurant:
         return JsonResponse({'error': 'Nu detii un restaurant.'}, status=403)
 
