@@ -22,16 +22,18 @@ function Dashboard() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+
       // 1. Luăm statisticile generale
-      const statsRes = await fetch('http://127.0.0.1:8000/api/dashboard-stats/');
+      const statsRes = await fetch('http://127.0.0.1:8000/api/dashboard-stats/', { headers });
       const statsData = await statsRes.json();
       
       // 2. Luăm meniul
-      const menuRes = await fetch('http://127.0.0.1:8000/api/menu/');
+      const menuRes = await fetch('http://127.0.0.1:8000/api/menu/', { headers });
       const menuData = await menuRes.json();
       
       // 3. Luăm rezervările
-      const resRes = await fetch('http://127.0.0.1:8000/api/reservations/');
+      const resRes = await fetch('http://127.0.0.1:8000/api/reservations/', { headers });
       const resData = await resRes.json();
 
       setRestaurantData(statsData);
@@ -58,7 +60,10 @@ function Dashboard() {
     try {
       const response = await fetch('http://127.0.0.1:8000/api/menu/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify(newDish),
       });
 
@@ -76,6 +81,9 @@ function Dashboard() {
     try {
       const response = await fetch(`http://127.0.0.1:8000/api/menu/${id}/`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
       if (response.ok) fetchData();
     } catch (err) {
@@ -87,7 +95,10 @@ function Dashboard() {
     try {
       const response = await fetch(`http://127.0.0.1:8000/api/reservations/${id}/`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify({ status: newStatus }),
       });
       if (response.ok) fetchData();
@@ -226,7 +237,7 @@ function Dashboard() {
           <button className={`nav-item ${activeTab === 'reservations' ? 'active' : ''}`} onClick={() => setActiveTab('reservations')} style={{ border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '1rem' }}>📅 Rezervări</button>
         </nav>
         <div style={{ marginTop: 'auto' }}>
-          <Link to="/login" className="nav-item" style={{ color: '#E2001A', display: 'block' }}>🚪 Deconectare</Link>
+        <Link to="/login" onClick={() => localStorage.clear()} className="nav-item" style={{ color: '#E2001A', display: 'block' }}>🚪 Deconectare</Link>
         </div>
       </aside>
 

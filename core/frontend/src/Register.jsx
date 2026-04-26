@@ -62,6 +62,10 @@ function Register() {
       const data = await response.json();
 
       if (response.ok) {
+        // Logăm utilizatorul automat salvând token-ul primit
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('isOwner', data.isOwner);
+        localStorage.setItem('userEmail', data.email);
         navigate('/register-success');
       } else {
         setError(data.error || 'Eroare la crearea contului. Încearcă din nou.');
