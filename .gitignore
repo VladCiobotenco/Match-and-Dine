@@ -13,9 +13,9 @@ pip-wheel-metadata/
 *.egg
 
 # Django
-*.log
-db.sqlite3
-db.sqlite3-journal
+# *.log
+# db.sqlite3
+# db.sqlite3-journal
 
 # Frontend
 node_modules/
