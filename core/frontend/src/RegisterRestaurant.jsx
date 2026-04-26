@@ -5,15 +5,14 @@ import './App.css';
 function RegisterRestaurant() {
   const navigate = useNavigate();
   
-  // Form state
+  // Form state - FĂRĂ RATING
   const [formData, setFormData] = useState({
     numeRestaurant: '',
     cui: '',
     adresa: '',
     specific: '',
     telefonContact: '',
-    descriere: '',
-    rating: ''
+    descriere: ''
   });
   
   // UI state
@@ -32,18 +31,19 @@ function RegisterRestaurant() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/register-restaurant/', {
+      const response = await fetch('http://127.0.0.1:8000/api/register-restaurant/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData), // Trimitem datele curățate
       });
 
       const data = await response.json();
 
       if (response.ok) {
         console.log("Restaurant created:", data);
+        localStorage.setItem('isOwner', 'true');
         navigate('/dashboard'); 
       } else {
         setError(data.error || 'A apărut o eroare la înregistrare.');
@@ -155,10 +155,7 @@ function RegisterRestaurant() {
         />
       </div>
 
-      <div className="input-group">
-        <label htmlFor="rating">Rating</label>
-        <input id="rating" name="rating" type="number" step="0.1" min="0" max="5" placeholder="Ex: 4.5" value={formData.rating} onChange={handleChange} />
-      </div>
+        {/* Câmpul Rating a fost complet eliminat de aici */}
 
         <button type="submit" className="login-button" disabled={isLoading} style={{ marginTop: '20px' }}>
           {isLoading ? 'Se configurează...' : 'Creează Dashboard-ul'}

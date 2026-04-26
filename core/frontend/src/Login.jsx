@@ -1,16 +1,14 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Am adăugat importurile pentru rutare
+import { Link, useNavigate } from 'react-router-dom';
 import './App.css';
 
 function Login() {
-  const navigate = useNavigate(); // Am inițializat ofițerul de trafic
+  const navigate = useNavigate();
 
-  // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   
-  // UI state
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +17,6 @@ function Login() {
     e.preventDefault();
     setError('');
 
-    // Basic validation
     if (!email.trim() || !password.trim()) {
       setError('Te rog să completezi ambele câmpuri!');
       return;
@@ -35,9 +32,7 @@ function Login() {
 
       const response = await fetch('http://127.0.0.1:8000/api/login/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -45,7 +40,9 @@ function Login() {
 
       if (response.ok) {
         console.log("Login successful:", data);
-        // Am activat navigarea automată către Home!
+        // SALVĂM STAREA DE OWNER ÎN MEMORIE
+        localStorage.setItem('isOwner', data.isOwner);
+        localStorage.setItem('userEmail', data.email);
         navigate('/home');
       } else {
         setError(data.error || 'A apărut o eroare la conectare.');
@@ -64,20 +61,14 @@ function Login() {
       <h2>Autentificare</h2>
 
       <form onSubmit={handleLogin}>
-        
-        {/* Error message render */}
         {error && <div className="error-message">{error}</div>}
         
         <div className="input-group">
           <label htmlFor="email">Email</label>
           <input 
-            id="email"
-            type="email" 
-            placeholder="Introdu adresa de email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={isLoading}
-            autoComplete="email"
+            id="email" type="email" placeholder="Introdu adresa de email"
+            value={email} onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading} autoComplete="email"
           />
         </div>
 
@@ -85,19 +76,11 @@ function Login() {
           <label htmlFor="password">Parolă</label>
           <div className="password-container">
             <input 
-              id="password"
-              type={showPassword ? 'text' : 'password'} 
-              placeholder="Introdu parola"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-              autoComplete="current-password"
+              id="password" type={showPassword ? 'text' : 'password'} placeholder="Introdu parola"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading} autoComplete="current-password"
             />
-            <button 
-              type="button" 
-              onClick={() => setShowPassword(!showPassword)}
-              disabled={isLoading}
-            >
+            <button type="button" onClick={() => setShowPassword(!showPassword)} disabled={isLoading}>
               {showPassword ? 'Ascunde' : 'Arată'}
             </button>
           </div>
@@ -105,18 +88,12 @@ function Login() {
 
         <div className="input-group checkbox-group">
           <label>
-            <input 
-              type="checkbox" 
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)} 
-              disabled={isLoading}
-            />
+            <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} disabled={isLoading} />
             Ține-mă minte
           </label>
         </div>
 
         <div className="forgot-password">
-          {/* Folosim Link în loc de ancoră HTML */}
           <Link to="/forgot-password">Ai uitat parola?</Link>
         </div>
 
@@ -125,10 +102,8 @@ function Login() {
         </button>
 
         <div className="register-link">
-          {/* Folosim Link în loc de ancoră HTML */}
           Nu ai cont? <Link to="/register">Înregistrează-te</Link>
         </div>
-
       </form>
     </div>
   );
