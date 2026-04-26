@@ -77,6 +77,61 @@ def api_register_restaurant(request):
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 @csrf_exempt
+def api_generate_description(request):
+    """
+    View 1: Handles the request from the frontend and extracts/validates the data.
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            nume = data.get('nume', '').strip()
+            adresa = data.get('adresa', '').strip()
+            
+            if not nume or not adresa:
+                return JsonResponse({'error': 'Numele și adresa sunt obligatorii pentru a genera o descriere'}, status=400)
+            
+            # Pass data to the second view/function to send the response
+            return send_ai_description_response(nume, adresa)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def send_ai_description_response(nume, adresa):
+    """
+    View 2: Generates the description using my_restaurant_ai and sends it to the frontend.
+    """
+    try:
+        import torch
+        from transformers import AutoTokenizer, AutoModelForCausalLM
+        from peft import PeftModel
+        
+        base_model_id = "google/gemma-2-2b-it"
+        adapter_path = r"f:\Facultate\AnII\MDS\Match-and-Dine\core\AI_Models\my_restaurant_ai\my_restaurant_ai"
+        
+        # Initialize tokenizer & model (Note: in production, load this globally outside the view to save time)
+        tokenizer = AutoTokenizer.from_pretrained(base_model_id)
+        base_model = AutoModelForCausalLM.from_pretrained(base_model_id, torch_dtype=torch.float16, device_map="auto")
+        model = PeftModel.from_pretrained(base_model, adapter_path)
+        
+        chat = [
+            {"role": "user", "content": f"Scrie o scurtă descriere atrăgătoare de maxim 3 propoziții pentru un restaurant numit '{nume}', situat la adresa '{adresa}'."}
+        ]
+        prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
+        
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        outputs = model.generate(**inputs, max_new_tokens=150)
+        description = tokenizer.decode(outputs[0], skip_special_tokens=True).split("model\n")[-1].strip()
+        
+        return JsonResponse({'descriere': description})
+        
+    except ImportError:
+        # Fallback response in case transformers, torch, or peft are not yet installed in your current environment
+        fallback_desc = f"Descoperă {nume}, noul tău loc preferat situat pe {adresa}. Te așteptăm cu preparate delicioase într-o atmosferă de neuitat!"
+        return JsonResponse({'descriere': fallback_desc})
+    except Exception as e:
+        return JsonResponse({'error': f'Eroare internă la AI: {str(e)}'}, status=500)
+
+@csrf_exempt # In production, you should use CSRF tokens or JWT instead of this decorator
 def api_register(request):
     if request.method == 'POST':
         try:

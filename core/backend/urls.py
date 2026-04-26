@@ -11,4 +11,5 @@ urlpatterns = [
     path('menu/', views.api_menu),
     path('menu/<int:item_id>/', views.api_menu_detail),
     path('reservations/', views.api_reservations),
+    path('generate-description/', views.api_generate_description, name='api_generate_description'),
 ]

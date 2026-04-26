@@ -18,6 +18,7 @@ function RegisterRestaurant() {
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Handlers
   const handleChange = (e) => {
@@ -55,6 +56,39 @@ function RegisterRestaurant() {
     }
   };
 
+  const handleGenerateDescription = async (e) => {
+    e.preventDefault();
+    if (!formData.numeRestaurant || !formData.adresa) {
+      setError('Completează "Numele Restaurantului" și "Adresa completă" pentru a genera o descriere.');
+      return;
+    }
+    
+    setIsGenerating(true);
+    setError('');
+    
+    try {
+      const response = await fetch('http://localhost:8000/api/generate-description/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ nume: formData.numeRestaurant, adresa: formData.adresa }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setFormData(prev => ({ ...prev, descriere: data.descriere }));
+      } else {
+        setError(data.error || 'Eroare la generarea descrierii.');
+      }
+    } catch (err) {
+      setError('Eroare de conexiune la generarea descrierii.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="login-container" style={{ maxWidth: '500px', margin: '40px 0' }}>
       <h1>Match & Dine Business</h1>
@@ -89,10 +123,37 @@ function RegisterRestaurant() {
           </div>
         </div>
 
-        <div className="input-group">
-          <label htmlFor="descriere">Descriere</label>
-          <textarea id="descriere" name="descriere" placeholder="Câteva cuvinte despre restaurantul tău..." value={formData.descriere} onChange={handleChange} rows="3" />
-        </div>
+      <div className="input-group">
+        <label htmlFor="descriere">Descriere</label>
+        <button 
+          type="button" 
+          onClick={handleGenerateDescription} 
+          disabled={isGenerating} 
+          className="login-button" 
+          style={{ marginBottom: '10px', backgroundColor: '#6c757d', padding: '10px' }}
+        >
+          {isGenerating ? 'Se generează cu AI...' : 'Generează descriere cu Match&Dine AI'}
+        </button>
+        <textarea 
+          id="descriere" 
+          name="descriere" 
+          placeholder="Câteva cuvinte despre restaurantul tău..." 
+          value={formData.descriere} 
+          onChange={handleChange} 
+          rows="4" 
+          style={{ 
+            width: '100%', 
+            padding: '12px 15px', 
+            border: '1px solid #ccc', 
+            borderRadius: '8px', 
+            boxSizing: 'border-box', 
+            fontFamily: 'inherit', 
+            fontSize: '1rem', 
+            resize: 'vertical',
+            minHeight: '100px'
+          }} 
+        />
+      </div>
 
         {/* Câmpul Rating a fost complet eliminat de aici */}
 
