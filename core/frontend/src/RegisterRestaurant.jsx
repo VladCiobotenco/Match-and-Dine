@@ -45,7 +45,7 @@ function RegisterRestaurant() {
       if (response.ok) {
         console.log("Restaurant created:", data);
         localStorage.setItem('isOwner', 'true');
-        navigate('/dashboard'); 
+        navigate('/owner-dashboard'); 
       } else {
         setError(data.error || 'A apărut o eroare la înregistrare.');
       }
@@ -159,7 +159,7 @@ function RegisterRestaurant() {
         {/* Câmpul Rating a fost complet eliminat de aici */}
 
         <button type="submit" className="login-button" disabled={isLoading} style={{ marginTop: '20px' }}>
-          {isLoading ? 'Se configurează...' : 'Creează Dashboard-ul'}
+          {isLoading ? 'Se configurează...' : 'Adaugă Restaurant'}
         </button>
       </form>
     </div>

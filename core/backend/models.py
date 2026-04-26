@@ -17,7 +17,7 @@ class UserProfile(models.Model):
         return f"{self.prenume} {self.nume} ({self.email})"
 
 class Restaurant(models.Model):
-    owner = models.OneToOneField(User, on_delete=models.CASCADE, related_name='restaurant', null=True, blank=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='restaurants', null=True, blank=True)
     nume = models.CharField(max_length=100)
     adresa = models.CharField(max_length=200)
     telefon_contact = models.CharField(max_length=20, blank=True, null=True)
