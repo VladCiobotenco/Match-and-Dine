@@ -7,6 +7,7 @@ from django.db import IntegrityError
 from django.core import signing
 from .models import UserProfile, Restaurant, MenuItem, Reservation
 from datetime import datetime
+import time
 
 def get_user_from_token(request):
     auth_header = request.headers.get('Authorization')
@@ -67,11 +68,10 @@ def api_register_restaurant(request):
                 return JsonResponse({'error': 'Numele și adresa sunt obligatorii'}, status=400)
 
             cui = data.get('cui', '').strip()
-            dummy_email = f"contact_{cui}@example.com" if cui else f"contact_{nume.replace(' ', '').lower()}@example.com"
+            timestamp = int(time.time())
+            dummy_email = f"contact_{cui}_{timestamp}@example.com" if cui else f"contact_{nume.replace(' ', '').lower()}_{timestamp}@example.com"
 
-            # Verificăm dacă userul are deja un restaurant legat de el
-            if Restaurant.objects.filter(owner=user).exists():
-                return JsonResponse({'error': 'Ai deja un restaurant înregistrat pe acest cont'}, status=400)
+            # Am eliminat limitarea la un singur restaurant pe cont
 
             restaurant = Restaurant.objects.create(
                 owner=user,
@@ -211,15 +211,30 @@ def api_get_restaurant_details(request, pk):
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 @csrf_exempt
+def api_owner_restaurants(request):
+    user = get_user_from_token(request)
+    if not user:
+        return JsonResponse({'error': 'Neautorizat'}, status=401)
+        
+    if request.method == 'GET':
+        restaurants = Restaurant.objects.filter(owner=user).values('id', 'nume', 'adresa', 'rating')
+        return JsonResponse(list(restaurants), safe=False)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+@csrf_exempt
 def api_dashboard_stats(request):
     user = get_user_from_token(request)
     if not user:
         return JsonResponse({'error': 'Neautorizat'}, status=401)
         
-    # Extragem DOAR restaurantul utilizatorului logat
-    restaurant = Restaurant.objects.filter(owner=user).first()
+    restaurant_id = request.headers.get('X-Restaurant-ID')
+    if restaurant_id:
+        restaurant = Restaurant.objects.filter(owner=user, id=restaurant_id).first()
+    else:
+        restaurant = Restaurant.objects.filter(owner=user).first()
+        
     if not restaurant:
-        return JsonResponse({'error': 'Nu detii un restaurant.'}, status=403)
+        return JsonResponse({'error': 'Restaurantul nu a fost găsit sau nu îți aparține.'}, status=403)
         
     if request.method == 'GET':
         return JsonResponse({
@@ -235,9 +250,14 @@ def api_menu(request):
     if not user:
         return JsonResponse({'error': 'Neautorizat'}, status=401)
         
-    restaurant = Restaurant.objects.filter(owner=user).first()
+    restaurant_id = request.headers.get('X-Restaurant-ID')
+    if restaurant_id:
+        restaurant = Restaurant.objects.filter(owner=user, id=restaurant_id).first()
+    else:
+        restaurant = Restaurant.objects.filter(owner=user).first()
+        
     if not restaurant:
-        return JsonResponse({'error': 'Nu detii un restaurant.'}, status=403)
+        return JsonResponse({'error': 'Restaurantul nu a fost găsit sau nu îți aparține.'}, status=403)
 
     if request.method == 'GET':
         items = MenuItem.objects.filter(restaurant=restaurant).values('id', 'nume', 'pret', 'categorie')
@@ -274,9 +294,14 @@ def api_reservations(request):
     if not user:
         return JsonResponse({'error': 'Neautorizat'}, status=401)
         
-    restaurant = Restaurant.objects.filter(owner=user).first()
+    restaurant_id = request.headers.get('X-Restaurant-ID')
+    if restaurant_id:
+        restaurant = Restaurant.objects.filter(owner=user, id=restaurant_id).first()
+    else:
+        restaurant = Restaurant.objects.filter(owner=user).first()
+        
     if not restaurant:
-        return JsonResponse({'error': 'Nu detii un restaurant.'}, status=403)
+        return JsonResponse({'error': 'Restaurantul nu a fost găsit sau nu îți aparține.'}, status=403)
 
     if request.method == 'GET':
         rezervari = Reservation.objects.filter(restaurant=restaurant).order_by('-data_timp')

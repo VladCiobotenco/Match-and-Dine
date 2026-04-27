@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import './App.css';
 
 function Dashboard() {
+  const { id } = useParams();
+
   // UI state
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
@@ -22,7 +24,10 @@ function Dashboard() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+      const headers = { 
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'X-Restaurant-ID': id
+      };
 
       // 1. Luăm statisticile generale
       const statsRes = await fetch('http://127.0.0.1:8000/api/dashboard-stats/', { headers });
@@ -62,7 +67,8 @@ function Dashboard() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'X-Restaurant-ID': id
         },
         body: JSON.stringify(newDish),
       });
@@ -77,12 +83,13 @@ function Dashboard() {
     }
   };
 
-  const handleDeleteDish = async (id) => {
+  const handleDeleteDish = async (itemId) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/menu/${id}/`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/menu/${itemId}/`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'X-Restaurant-ID': id
         }
       });
       if (response.ok) fetchData();
@@ -91,13 +98,14 @@ function Dashboard() {
     }
   };
 
-  const handleUpdateReservation = async (id, newStatus) => {
+  const handleUpdateReservation = async (resId, newStatus) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/reservations/${id}/`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/reservations/${resId}/`, {
         method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'X-Restaurant-ID': id
         },
         body: JSON.stringify({ status: newStatus }),
       });
@@ -230,11 +238,13 @@ function Dashboard() {
   return (
     <div className="dashboard-layout">
       <aside className="sidebar">
-        <h2>Match & Dine</h2>
-        <nav className="nav-menu">
-          <button className={`nav-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')} style={{ border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '1rem' }}>📊 Privire Generală</button>
-          <button className={`nav-item ${activeTab === 'menu' ? 'active' : ''}`} onClick={() => setActiveTab('menu')} style={{ border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '1rem' }}>🍽️ Meniul Meu</button>
-          <button className={`nav-item ${activeTab === 'reservations' ? 'active' : ''}`} onClick={() => setActiveTab('reservations')} style={{ border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '1rem' }}>📅 Rezervări</button>
+        <Link to="/owner-dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <h2>⬅️ Înapoi la restaurante</h2>
+        </Link>
+        <nav className="nav-menu" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '20px' }}>
+          <button className={`nav-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')} style={{ border: 'none', backgroundColor: activeTab === 'overview' ? '#ffe5e5' : 'transparent', color: activeTab === 'overview' ? '#E2001A' : 'inherit', fontWeight: activeTab === 'overview' ? 'bold' : 'normal', textAlign: 'left', cursor: 'pointer', fontSize: '1rem', padding: '12px 15px', borderRadius: '8px', transition: 'all 0.2s' }}>📊 Privire Generală</button>
+          <button className={`nav-item ${activeTab === 'menu' ? 'active' : ''}`} onClick={() => setActiveTab('menu')} style={{ border: 'none', backgroundColor: activeTab === 'menu' ? '#ffe5e5' : 'transparent', color: activeTab === 'menu' ? '#E2001A' : 'inherit', fontWeight: activeTab === 'menu' ? 'bold' : 'normal', textAlign: 'left', cursor: 'pointer', fontSize: '1rem', padding: '12px 15px', borderRadius: '8px', transition: 'all 0.2s' }}>🍽️ Meniul Meu</button>
+          <button className={`nav-item ${activeTab === 'reservations' ? 'active' : ''}`} onClick={() => setActiveTab('reservations')} style={{ border: 'none', backgroundColor: activeTab === 'reservations' ? '#ffe5e5' : 'transparent', color: activeTab === 'reservations' ? '#E2001A' : 'inherit', fontWeight: activeTab === 'reservations' ? 'bold' : 'normal', textAlign: 'left', cursor: 'pointer', fontSize: '1rem', padding: '12px 15px', borderRadius: '8px', transition: 'all 0.2s' }}>📅 Rezervări</button>
         </nav>
         <div style={{ marginTop: 'auto' }}>
         <Link to="/login" onClick={() => localStorage.clear()} className="nav-item" style={{ color: '#E2001A', display: 'block' }}>🚪 Deconectare</Link>
