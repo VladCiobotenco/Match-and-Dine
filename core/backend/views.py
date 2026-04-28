@@ -1,4 +1,5 @@
 import json
+import requests  
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
@@ -6,7 +7,7 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError
 from .models import UserProfile, Restaurant
 
-@csrf_exempt # In production, you should use CSRF tokens or JWT instead of this decorator
+@csrf_exempt
 def api_login(request):
     if request.method == 'POST':
         try:
@@ -14,7 +15,6 @@ def api_login(request):
             email = data.get('email')
             password = data.get('password')
 
-            # Django uses username for auth by default. We'll find the user by email first.
             try:
                 user_obj = User.objects.get(email=email)
                 user = authenticate(username=user_obj.username, password=password)
@@ -30,7 +30,7 @@ def api_login(request):
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-@csrf_exempt # In production, you should use CSRF tokens or JWT instead of this decorator
+@csrf_exempt
 def api_register_restaurant(request):
     if request.method == 'POST':
         try:
@@ -49,7 +49,6 @@ def api_register_restaurant(request):
             except ValueError:
                 rating = 0.0
 
-            # Create a placeholder email for contact since it's required by the model and missing in the form
             cui = data.get('cui', '').strip()
             dummy_email = f"contact_{cui}@example.com" if cui else f"contact_{nume.replace(' ', '').lower()}@example.com"
 
@@ -71,9 +70,6 @@ def api_register_restaurant(request):
 
 @csrf_exempt
 def api_generate_description(request):
-    """
-    View 1: Handles the request from the frontend and extracts/validates the data.
-    """
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -83,48 +79,34 @@ def api_generate_description(request):
             if not nume or not adresa:
                 return JsonResponse({'error': 'Numele și adresa sunt obligatorii pentru a genera o descriere'}, status=400)
             
-            # Pass data to the second view/function to send the response
             return send_ai_description_response(nume, adresa)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-def send_ai_description_response(nume, adresa):
-    """
-    View 2: Generates the description using my_restaurant_ai and sends it to the frontend.
-    """
-    try:
-        import torch
-        from transformers import AutoTokenizer, AutoModelForCausalLM
-        from peft import PeftModel
-        
-        base_model_id = "google/gemma-2-2b-it"
-        adapter_path = r"f:\Facultate\AnII\MDS\Match-and-Dine\core\AI_Models\my_restaurant_ai\my_restaurant_ai"
-        
-        # Initialize tokenizer & model (Note: in production, load this globally outside the view to save time)
-        tokenizer = AutoTokenizer.from_pretrained(base_model_id)
-        base_model = AutoModelForCausalLM.from_pretrained(base_model_id, torch_dtype=torch.float16, device_map="auto")
-        model = PeftModel.from_pretrained(base_model, adapter_path)
-        
-        chat = [
-            {"role": "user", "content": f"Scrie o scurtă descriere atrăgătoare de maxim 3 propoziții pentru un restaurant numit '{nume}', situat la adresa '{adresa}'."}
-        ]
-        prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
-        
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-        outputs = model.generate(**inputs, max_new_tokens=150)
-        description = tokenizer.decode(outputs[0], skip_special_tokens=True).split("model\n")[-1].strip()
-        
-        return JsonResponse({'descriere': description})
-        
-    except ImportError:
-        # Fallback response in case transformers, torch, or peft are not yet installed in your current environment
-        fallback_desc = f"Descoperă {nume}, noul tău loc preferat situat pe {adresa}. Te așteptăm cu preparate delicioase într-o atmosferă de neuitat!"
-        return JsonResponse({'descriere': fallback_desc})
-    except Exception as e:
-        return JsonResponse({'error': f'Eroare internă la AI: {str(e)}'}, status=500)
+def send_ai_description_response(nume, specific):
+    
+    API_URL = "https://affiliate-rockiness-jaywalker.ngrok-free.dev/generate" 
+    
 
-@csrf_exempt # In production, you should use CSRF tokens or JWT instead of this decorator
+    payload = {
+        "nume": nume,
+        "specific": specific
+    }
+    
+    try:
+        response = requests.post(API_URL, json=payload)
+        response.raise_for_status() 
+        
+        data = response.json()
+        return JsonResponse({'descriere': data.get('descriere', '')})
+            
+    except Exception as e:
+        print(f"Eroare Colab: {e}")
+        fallback_desc = f"Descoperă {nume}, noul tău loc preferat situat pe {specific}. Te așteptăm cu preparate delicioase într-o atmosferă de neuitat!"
+        return JsonResponse({'descriere': fallback_desc})
+   
+@csrf_exempt
 def api_register(request):
     if request.method == 'POST':
         try:
@@ -135,7 +117,6 @@ def api_register(request):
             telefon = data.get('telefon', '').strip()
             password = data.get('password', '')
 
-            # Validation
             if not nume or not prenume or not email or not password:
                 return JsonResponse({'error': 'Toate câmpurile obligatorii trebuie completate'}, status=400)
             
@@ -145,16 +126,14 @@ def api_register(request):
             if User.objects.filter(email=email).exists():
                 return JsonResponse({'error': 'Adresa de email este deja înregistrată'}, status=400)
 
-            # Create user
             user = User.objects.create_user(
-                username=email,  # Use email as username
+                username=email,
                 email=email,
                 password=password,
                 first_name=prenume,
                 last_name=nume
             )
 
-            # Create user profile
             UserProfile.objects.create(
                 user=user,
                 nume=nume,
