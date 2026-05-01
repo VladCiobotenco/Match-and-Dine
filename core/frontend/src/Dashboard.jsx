@@ -30,15 +30,15 @@ function Dashboard() {
       };
 
       // 1. Luăm statisticile generale
-      const statsRes = await fetch('http://127.0.0.1:8000/api/dashboard-stats/', { headers });
+      const statsRes = await fetch('/api/dashboard-stats/', { headers });
       const statsData = await statsRes.json();
       
       // 2. Luăm meniul
-      const menuRes = await fetch('http://127.0.0.1:8000/api/menu/', { headers });
+      const menuRes = await fetch('/api/menu/', { headers });
       const menuData = await menuRes.json();
       
       // 3. Luăm rezervările
-      const resRes = await fetch('http://127.0.0.1:8000/api/reservations/', { headers });
+      const resRes = await fetch('/api/reservations/', { headers });
       const resData = await resRes.json();
 
       setRestaurantData(statsData);
@@ -63,13 +63,14 @@ function Dashboard() {
     if (!newDish.nume || !newDish.pret) return;
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/menu/', {
+      const response = await fetch('/api/menu/', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'X-Restaurant-ID': id
+          'X-Restaurant-ID': id,
         },
+        credentials: 'include',
         body: JSON.stringify(newDish),
       });
 
@@ -85,12 +86,13 @@ function Dashboard() {
 
   const handleDeleteDish = async (itemId) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/menu/${itemId}/`, {
+      const response = await fetch(`/api/menu/${itemId}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'X-Restaurant-ID': id
-        }
+          'X-Restaurant-ID': id,
+        },
+        credentials: 'include'
       });
       if (response.ok) fetchData();
     } catch (err) {
@@ -100,13 +102,14 @@ function Dashboard() {
 
   const handleUpdateReservation = async (resId, newStatus) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/reservations/${resId}/`, {
+      const response = await fetch(`/api/reservations/${resId}/`, {
         method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'X-Restaurant-ID': id
+          'X-Restaurant-ID': id,
         },
+        credentials: 'include',
         body: JSON.stringify({ status: newStatus }),
       });
       if (response.ok) fetchData();

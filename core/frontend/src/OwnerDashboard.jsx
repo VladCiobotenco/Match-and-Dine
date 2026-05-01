@@ -12,7 +12,7 @@ function OwnerDashboard() {
     const fetchRestaurants = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/owner-restaurants/', {
+        const response = await fetch('/api/owner-restaurants/', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }

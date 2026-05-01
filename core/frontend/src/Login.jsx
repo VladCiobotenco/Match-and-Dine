@@ -30,13 +30,23 @@ function Login() {
         password, 
       };
 
-      const response = await fetch('http://127.0.0.1:8000/api/login/', {
+      const response = await fetch('/api/login/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      // Parse JSON only when available; otherwise report a server error
+      let data = {};
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        throw new Error(`Eroare Server: ${response.status} ${response.statusText}`);
+      }
 
       if (response.ok) {
         console.log("Login successful:", data);
@@ -49,7 +59,7 @@ function Login() {
         setError(data.error || 'A apărut o eroare la conectare.');
       }
     } catch (err) {
-      setError('A apărut o eroare la conectare. Încearcă din nou.');
+      setError(err.message || 'A apărut o eroare la conectare. Încearcă din nou.');
       console.error('Login error:', err);
     } finally {
       setIsLoading(false);

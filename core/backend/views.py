@@ -1,12 +1,13 @@
 import json
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.core import signing
+import jwt
+from django.conf import settings
 from .models import UserProfile, Restaurant, MenuItem, Reservation
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import time
 
 def get_user_from_token(request):
@@ -14,13 +15,12 @@ def get_user_from_token(request):
     if auth_header and auth_header.startswith('Bearer '):
         token = auth_header.split(' ')[1]
         try:
-            data = signing.loads(token, max_age=86400) # 1 day expiration
+            data = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
             return User.objects.get(id=data['user_id'])
-        except (signing.BadSignature, signing.SignatureExpired, User.DoesNotExist):
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, User.DoesNotExist):
             return None
     return None
 
-@csrf_exempt
 def api_login(request):
     if request.method == 'POST':
         try:
@@ -35,7 +35,12 @@ def api_login(request):
                 user = None
 
             if user is not None:
-                token = signing.dumps({'user_id': user.id})
+                payload = {
+                    'user_id': user.id,
+                    'exp': datetime.now(timezone.utc) + timedelta(days=1),
+                    'iat': datetime.now(timezone.utc)
+                }
+                token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
                 # Verificăm strict dacă ACEST user are un restaurant înregistrat
                 is_owner = Restaurant.objects.filter(owner=user).exists()
                 return JsonResponse({
@@ -50,7 +55,6 @@ def api_login(request):
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-@csrf_exempt
 def api_register_restaurant(request):
     if request.method == 'POST':
         user = get_user_from_token(request)
@@ -90,7 +94,6 @@ def api_register_restaurant(request):
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-@csrf_exempt
 def api_generate_description(request):
     """
     View 1: Handles the request from the frontend and extracts/validates the data.
@@ -145,7 +148,6 @@ def send_ai_description_response(nume, adresa):
     except Exception as e:
         return JsonResponse({'error': f'Eroare internă la AI: {str(e)}'}, status=500)
 
-@csrf_exempt # In production, you should use CSRF tokens or JWT instead of this decorator
 def api_register(request):
     if request.method == 'POST':
         try:
@@ -169,7 +171,12 @@ def api_register(request):
             UserProfile.objects.create(user=user, nume=nume, prenume=prenume, email=email, telefon=telefon if telefon else None)
 
             # Generăm token-ul pentru a loga utilizatorul automat după înregistrare
-            token = signing.dumps({'user_id': user.id})
+            payload = {
+                'user_id': user.id,
+                'exp': datetime.now(timezone.utc) + timedelta(days=1),
+                'iat': datetime.now(timezone.utc)
+            }
+            token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
             return JsonResponse({
                 'message': 'Cont creat cu succes', 
                 'email': user.email,
@@ -210,7 +217,6 @@ def api_get_restaurant_details(request, pk):
             return JsonResponse({'error': 'Restaurantul nu a fost găsit'}, status=404)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-@csrf_exempt
 def api_owner_restaurants(request):
     user = get_user_from_token(request)
     if not user:
@@ -221,7 +227,6 @@ def api_owner_restaurants(request):
         return JsonResponse(list(restaurants), safe=False)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-@csrf_exempt
 def api_dashboard_stats(request):
     user = get_user_from_token(request)
     if not user:
@@ -244,7 +249,6 @@ def api_dashboard_stats(request):
         })
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-@csrf_exempt
 def api_menu(request):
     user = get_user_from_token(request)
     if not user:
@@ -277,7 +281,6 @@ def api_menu(request):
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-@csrf_exempt
 def api_menu_detail(request, item_id):
     if request.method == 'DELETE':
         try:
@@ -288,7 +291,6 @@ def api_menu_detail(request, item_id):
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-@csrf_exempt
 def api_reservations(request):
     user = get_user_from_token(request)
     if not user:
@@ -316,7 +318,6 @@ def api_reservations(request):
 
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-@csrf_exempt
 def api_reservation_detail(request, res_id):
     if request.method == 'PATCH':
         try:
