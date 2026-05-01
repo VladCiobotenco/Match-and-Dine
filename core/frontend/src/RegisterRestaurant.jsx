@@ -31,12 +31,13 @@ function RegisterRestaurant() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/register-restaurant/', {
+      const response = await fetch('/api/register-restaurant/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
+        credentials: 'include',
         body: JSON.stringify(formData), // Trimitem datele curățate
       });
 
@@ -68,11 +69,12 @@ function RegisterRestaurant() {
     setError('');
     
     try {
-      const response = await fetch('http://localhost:8000/api/generate-description/', {
+      const response = await fetch('/api/generate-description/', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({ nume: formData.numeRestaurant, adresa: formData.adresa }),
       });
       

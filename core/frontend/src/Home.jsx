@@ -11,7 +11,7 @@ function Home() {
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/restaurants/');
+        const response = await fetch('/api/restaurants/');
         if (response.ok) {
           const data = await response.json();
           setRestaurants(data);
