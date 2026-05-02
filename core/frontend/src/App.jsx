@@ -7,13 +7,17 @@ import Dashboard from './Dashboard';
 import OwnerDashboard from './OwnerDashboard';
 import Home from './Home';
 import Navbar from './Navbar';
+import ForgotPassword from './ForgotPassword';
+import ResetPassword from './ResetPassword';
+import FoodTinder from './FoodTinder';
+import MyReservations from './MyReservations';
 
 function App() {
   return (
     <BrowserRouter>
       <Navbar />
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/home" replace />} />
         
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -26,6 +30,12 @@ function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/owner-dashboard" element={<OwnerDashboard />} />
         <Route path="/dashboard/:id" element={<Dashboard />} />
+        <Route path="/food-tinder" element={<FoodTinder />} />
+        <Route path="/my-reservations" element={<MyReservations />} />
+        
+        {/* Rute pentru resetarea parolei */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
       </Routes>
     </BrowserRouter>
   );
