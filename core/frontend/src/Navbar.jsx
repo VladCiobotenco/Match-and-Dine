@@ -6,6 +6,7 @@ function Navbar() {
   
   // Citim din memoria browserului
   const isOwner = localStorage.getItem('isOwner') === 'true';
+  const isLoggedIn = !!localStorage.getItem('token');
 
   // Nu afișăm meniul pe paginile de login/register
   const hiddenRoutes = ['/login', '/register', '/register-success', '/register-restaurant'];
@@ -21,6 +22,20 @@ function Navbar() {
           </button>
         </Link>
         
+        <Link to="/food-tinder" style={{ textDecoration: 'none' }}>
+          <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: '1px solid #E2001A', backgroundColor: location.pathname === '/food-tinder' ? '#E2001A' : 'white', color: location.pathname === '/food-tinder' ? 'white' : '#E2001A', fontWeight: 'bold' }}>
+            🔥 Food Match
+          </button>
+        </Link>
+        
+        {isLoggedIn && (
+          <Link to="/my-reservations" style={{ textDecoration: 'none' }}>
+            <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: '1px solid #E2001A', backgroundColor: location.pathname === '/my-reservations' ? '#E2001A' : 'white', color: location.pathname === '/my-reservations' ? 'white' : '#E2001A', fontWeight: 'bold' }}>
+              📅 Rezervările Mele
+            </button>
+          </Link>
+        )}
+
         {/* Butonul de Dashboard apare DOAR dacă userul este owner */}
         {isOwner && (
           <Link to="/owner-dashboard" style={{ textDecoration: 'none' }}>
@@ -30,11 +45,19 @@ function Navbar() {
           </Link>
         )}
         
-        <Link to="/login" onClick={() => localStorage.clear()} style={{ textDecoration: 'none' }}>
-          <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: 'none', backgroundColor: '#6c757d', color: 'white', fontWeight: 'bold' }}>
-            Deconectare
-          </button>
-        </Link>
+        {isLoggedIn ? (
+          <Link to="/login" onClick={() => localStorage.clear()} style={{ textDecoration: 'none' }}>
+            <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: 'none', backgroundColor: '#6c757d', color: 'white', fontWeight: 'bold' }}>
+              Deconectare
+            </button>
+          </Link>
+        ) : (
+          <Link to="/login" style={{ textDecoration: 'none' }}>
+            <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: 'none', backgroundColor: '#E2001A', color: 'white', fontWeight: 'bold' }}>
+              Autentificare
+            </button>
+          </Link>
+        )}
       </div>
     </nav>
   );

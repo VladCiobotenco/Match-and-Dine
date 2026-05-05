@@ -7,6 +7,12 @@ function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  
+  // State-uri pentru rezervare
+  const [resDate, setResDate] = useState('');
+  const [resTime, setResTime] = useState('');
+  const [resPersons, setResPersons] = useState(2);
+  const [bookingMsg, setBookingMsg] = useState('');
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -29,16 +35,58 @@ function Home() {
     fetchRestaurants();
   }, []);
 
-  return (
-    <div className="login-container" style={{ maxWidth: '1000px', margin: '40px auto', padding: '30px', textAlign: 'center' }}>
-      <h1>Match & Dine</h1>
-      <p>Descoperă cele mai bune restaurante!</p>
-      
-      {localStorage.getItem('isOwner') === 'true' && (
-        <Link to="/owner-dashboard" className="login-button" style={{ display: 'inline-block', width: 'auto', textDecoration: 'none', margin: '20px 0' }}>Restaurantele mele</Link>
-      )}
+  const handleCardClick = async (restId) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/restaurants/${restId}/`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedRestaurant(data);
+        setBookingMsg('');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-      <div style={{ marginTop: '40px', textAlign: 'left' }}>
+  const handleBooking = async (e) => {
+    e.preventDefault();
+    if (!localStorage.getItem('token')) {
+      setBookingMsg('Trebuie să fii conectat pentru a face o rezervare.');
+      return;
+    }
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/restaurants/${selectedRestaurant.id}/reserve/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ data: resDate, ora: resTime, persoane: resPersons })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setBookingMsg('✅ Rezervare trimisă cu succes!');
+        setTimeout(() => setSelectedRestaurant(null), 2500); // închide fereastra automat
+      } else {
+        setBookingMsg(`❌ Eroare: ${data.error}`);
+      }
+    } catch (err) {
+      setBookingMsg('Eroare de conexiune.');
+    }
+  };
+
+  return (
+    <div className="home-container">
+      <div className="hero-section">
+        <h1>Match & Dine</h1>
+        <p>Descoperă cele mai bune restaurante din zona ta!</p>
+      
+        {localStorage.getItem('isOwner') === 'true' && (
+          <Link to="/owner-dashboard" className="login-button" style={{ display: 'inline-block', width: 'auto', textDecoration: 'none' }}>Restaurantele mele</Link>
+        )}
+      </div>
+
+      <div>
         <h2 style={{ marginBottom: '20px' }}>Restaurante Disponibile</h2>
         
         {isLoading && <p>Se încarcă restaurantele...</p>}
@@ -49,13 +97,13 @@ function Home() {
         )}
 
         {!isLoading && !error && restaurants.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+          <div className="restaurant-grid">
             {restaurants.map((rest) => (
-              <div key={rest.id} onClick={() => setSelectedRestaurant(rest)} style={{ cursor: 'pointer', backgroundColor: '#fff', border: '1px solid #e5e5e5', borderRadius: '15px', padding: '20px', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                <h3 style={{ margin: '0 0 10px 0', color: '#1a1a1a' }}>{rest.nume}</h3>
-                <p style={{ margin: '0 0 10px 0', color: '#666', fontSize: '0.9rem' }}>📍 {rest.adresa}</p>
+              <div key={rest.id} onClick={() => handleCardClick(rest.id)} className="restaurant-card">
+                <h3 style={{ margin: '0 0 10px 0', color: '#1a1a1a', fontSize: '1.4rem' }}>{rest.nume}</h3>
+                <p style={{ margin: '0 0 15px 0', color: '#666', fontSize: '0.95rem' }}>📍 {rest.adresa}</p>
                 {rest.descriere && (
-                  <p style={{ margin: '0 0 15px 0', color: '#444', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                  <p style={{ margin: '0 0 20px 0', color: '#444', fontSize: '0.95rem', fontStyle: 'italic', flexGrow: 1 }}>
                     {rest.descriere.length > 100 ? `${rest.descriere.substring(0, 100)}...` : rest.descriere}
                   </p>
                 )}
@@ -93,7 +141,6 @@ function Home() {
                 boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
                 padding: '30px',
                 width: '70vw',
-                height: '70vh',
                 display: 'flex',
                 flexDirection: 'column',
                 position: 'relative',
@@ -115,12 +162,43 @@ function Home() {
                 </div>
                 <button onClick={() => setSelectedRestaurant(null)} style={{ background: 'none', border: 'none', fontSize: '2rem', cursor: 'pointer', color: '#666', padding: 0, lineHeight: 1 }}>&times;</button>
               </div>
-              <div style={{ flex: 1, borderRadius: '10px', overflow: 'hidden', border: '1px solid #e5e5e5' }}>
-                <iframe
-                  title={`Harta pentru ${selectedRestaurant.nume}`}
-                  width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen
-                  src={`https://www.google.com/maps?q=${encodeURIComponent(selectedRestaurant.adresa)}&output=embed`}
-                ></iframe>
+              
+              <div style={{ display: 'flex', gap: '30px', marginTop: '20px' }}>
+                {/* Secțiunea de Meniu */}
+                <div style={{ flex: 2, textAlign: 'left' }}>
+                  <h3 style={{ borderBottom: '2px solid #E2001A', paddingBottom: '10px', color: '#E2001A' }}>Meniul Nostru</h3>
+                  <div style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '10px', marginTop: '15px' }}>
+                    {selectedRestaurant.meniu && selectedRestaurant.meniu.length > 0 ? (
+                      <ul style={{ listStyle: 'none', padding: 0 }}>
+                        {selectedRestaurant.meniu.map(item => (
+                          <li key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px dashed #ddd' }}>
+                            <span style={{ fontWeight: '500' }}>{item.nume} <small style={{ color: '#888' }}>({item.categorie})</small></span>
+                            <span style={{ fontWeight: 'bold', color: '#E2001A' }}>{item.pret} RON</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>Acest restaurant nu are încă meniul adăugat.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Secțiunea de Rezervare */}
+                <div style={{ flex: 1, backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '15px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }}>
+                  <h3 style={{ marginBottom: '15px' }}>Rezervă o masă</h3>
+                  <form onSubmit={handleBooking} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div style={{ textAlign: 'left' }}><label>Data</label><input type="date" required value={resDate} onChange={e => setResDate(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
+                    <div style={{ textAlign: 'left' }}><label>Ora</label><input type="time" required value={resTime} onChange={e => setResTime(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
+                    <div style={{ textAlign: 'left' }}><label>Persoane</label><input type="number" min="1" max="20" required value={resPersons} onChange={e => setResPersons(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} /></div>
+                    
+                    <button type="submit" className="login-button" style={{ marginTop: '10px', padding: '12px' }}>
+                      Confirmă Rezervarea
+                    </button>
+                    {bookingMsg && (
+                      <p style={{ marginTop: '10px', fontWeight: 'bold', color: bookingMsg.includes('✅') ? 'green' : '#E2001A' }}>{bookingMsg}</p>
+                    )}
+                  </form>
+                </div>
               </div>
             </div>
           </div>

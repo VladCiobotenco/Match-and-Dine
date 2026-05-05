@@ -39,8 +39,20 @@ class MenuItem(models.Model):
 class Reservation(models.Model):
     STATUS_CHOICES = [('Așteptare', 'În așteptare'), ('Confirmat', 'Confirmat'), ('Respins', 'Respins')]
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='reservations')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='rezervari_client', null=True, blank=True)
     nume_client = models.CharField(max_length=100)
     data_timp = models.DateTimeField()
     numar_persoane = models.IntegerField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Așteptare')
+    nota_acordata = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+class UserInteraction(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='interactions')
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    action = models.CharField(max_length=20, choices=[('LIKE', 'Like'), ('REJECT', 'Reject')])
+    match_score = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'restaurant')

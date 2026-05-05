@@ -337,3 +337,122 @@
 .modal-content-anim {
   animation: scaleUp 0.3s ease-out forwards;
 }
+
+/* --- TINDER CARD ANIMATIONS & DYNAMICS --- */
+.tinder-card-container {
+  position: relative;
+  min-height: 480px;
+  perspective: 1000px;
+}
+
+.tinder-card {
+  background-color: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: center bottom;
+  will-change: transform, opacity;
+  animation: cardEnter 0.4s ease-out; /* FĂRĂ forwards pentru a permite tranzițiile ulterioare */
+}
+
+@keyframes cardEnter {
+  0% { opacity: 0; transform: scale(0.95) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.swipe-left {
+  transform: translate3d(-200%, 50px, 0) rotate(-30deg) !important;
+  opacity: 0 !important;
+}
+
+.swipe-right {
+  transform: translate3d(200%, 50px, 0) rotate(30deg) !important;
+  opacity: 0 !important;
+}
+
+/* Butoane de actiune (Like/Reject) interactive */
+.swipe-btn {
+  width: 70px; 
+  height: 70px; 
+  border-radius: 50%; 
+  border: none; 
+  background-color: #fff; 
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+  font-size: 2rem; 
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s;
+}
+.swipe-btn:hover {
+  transform: scale(1.15);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+.swipe-btn:active {
+  transform: scale(0.95);
+}
+
+/* Loading Dots Animation pentru AI */
+.loading-dots::after {
+  content: '';
+  animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+  100% { content: ''; }
+}
+
+/* --- HOME PAGE STYLES --- */
+.home-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.hero-section {
+  text-align: center;
+  padding: 50px 20px;
+  background: linear-gradient(135deg, #FFF3F4 0%, #FFFFFF 100%);
+  border-radius: 24px;
+  margin-bottom: 50px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+}
+
+.hero-section h1 {
+  font-size: 2.8rem;
+  color: #1A1A1A;
+  margin-bottom: 10px;
+}
+
+.hero-section p {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.restaurant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 25px;
+}
+
+.restaurant-card {
+  background-color: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 16px;
+  padding: 25px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.restaurant-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}

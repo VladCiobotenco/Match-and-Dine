@@ -6,9 +6,16 @@ from django.db import IntegrityError
 from django.core import signing
 import jwt
 from django.conf import settings
-from .models import UserProfile, Restaurant, MenuItem, Reservation
+from .models import UserProfile, Restaurant, MenuItem, Reservation, UserInteraction
 from datetime import datetime, timedelta, timezone
 import time
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
 
 def get_user_from_token(request):
     auth_header = request.headers.get('Authorization')
@@ -324,7 +331,183 @@ def api_reservation_detail(request, res_id):
             data = json.loads(request.body)
             nou_status = data.get('status')
             Reservation.objects.filter(id=res_id).update(status=nou_status)
-            return JsonResponse({'message': 'Status actualizat'})
+            return JsonResponse({'message': 'Status actualizat cu succes'})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+@api_view(['POST'])
+def api_password_reset_request(request):
+    email = request.data.get('email')
+    if not email:
+        return Response({'error': 'Te rog să introduci un email.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        user = User.objects.get(email=email)
+        
+        # Generăm un token unic valabil temporar și identificatorul utilizatorului codat b64
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = PasswordResetTokenGenerator().make_token(user)
+        
+        # Link-ul generat (trebuie să corespundă cu ruta de frontend pe care o vei crea în React)
+        reset_url = f"http://localhost:5173/reset-password/{uid}/{token}/"
+        
+        # Trimiterea emailului
+        send_mail(
+            subject='Resetare Parolă - Match & Dine',
+            message=f'Salut!\n\nAccesează acest link pentru a-ți reseta parola:\n{reset_url}\n\nDacă nu ai cerut asta, ignoră acest mesaj.',
+            from_email='noreply@matchanddine.ro',
+            recipient_list=[email],
+            fail_silently=False,
+        )
+    except User.DoesNotExist:
+        # Pentru securitate, returnăm succes chiar dacă emailul nu există, astfel încât atacatorii să nu poată enumera conturile valide
+        pass
+
+    return Response({'message': 'Dacă adresa de email există în sistem, a fost trimis un link de resetare.'}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def api_password_reset_confirm(request):
+    uidb64 = request.data.get('uid')
+    token = request.data.get('token')
+    new_password = request.data.get('new_password')
+    
+    if not uidb64 or not token or not new_password:
+        return Response({'error': 'Date incomplete.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    # Verificăm validitatea token-ului și actualizăm parola
+    if user is not None and PasswordResetTokenGenerator().check_token(user, token):
+        user.set_password(new_password)
+        user.save()
+        return Response({'message': 'Parola a fost actualizată cu succes.'}, status=status.HTTP_200_OK)
+    else:
+        return Response({'error': 'Link-ul de resetare este invalid sau a expirat.'}, status=status.HTTP_400_BAD_REQUEST)
+
+def api_swipe_deck(request):
+    user = get_user_from_token(request)
+    if not user:
+        return JsonResponse({'error': 'Neautorizat'}, status=401)
+        
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            prompt = data.get('prompt', '')
+            
+            # --- AICI VA FI INTEGRAT AL DOILEA AI ---
+            # Momentan simulăm comportamentul filtrând restaurantele cu care userul a interacționat deja.
+            interacted_ids = UserInteraction.objects.filter(user=user).values_list('restaurant_id', flat=True)
+            
+            # Excludem cele respinse sau apreciate pentru a avea un deck proaspăt. Limităm la 10 carduri.
+            restaurants = Restaurant.objects.exclude(id__in=interacted_ids)[:10]
+            
+            deck = list(restaurants.values('id', 'nume', 'adresa', 'descriere', 'rating'))
+            
+            import random
+            for r in deck:
+                r['matchScore'] = random.randint(75, 98) # Fake match score pentru UI
+                
+            return JsonResponse(deck, safe=False)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def api_record_swipe(request):
+    user = get_user_from_token(request)
+    if not user: return JsonResponse({'error': 'Neautorizat'}, status=401)
+        
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            rest_id = data.get('restaurant_id')
+            action = data.get('action') # 'LIKE' sau 'REJECT'
+            match_score = data.get('match_score', 0)
+            
+            UserInteraction.objects.update_or_create(user=user, restaurant_id=rest_id, defaults={'action': action, 'match_score': match_score})
+            return JsonResponse({'message': 'Acțiune înregistrată'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def api_my_matches(request):
+    user = get_user_from_token(request)
+    if not user: return JsonResponse({'error': 'Neautorizat'}, status=401)
+        
+    if request.method == 'GET':
+        interactions = UserInteraction.objects.filter(user=user, action='LIKE').select_related('restaurant').order_by('-match_score')
+        matches = [{
+            'id': inter.restaurant.id,
+            'nume': inter.restaurant.nume,
+            'adresa': inter.restaurant.adresa,
+            'descriere': inter.restaurant.descriere,
+            'matchScore': inter.match_score
+        } for inter in interactions]
+        
+        return JsonResponse(matches, safe=False)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def api_create_reservation(request, pk):
+    user = get_user_from_token(request)
+    if not user: return JsonResponse({'error': 'Trebuie să fii autentificat pentru a rezerva!'}, status=401)
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            restaurant = Restaurant.objects.get(pk=pk)
+            
+            data_rez = data.get('data') # YYYY-MM-DD
+            ora_rez = data.get('ora') # HH:MM
+            if not data_rez or not ora_rez: return JsonResponse({'error': 'Data și ora sunt obligatorii'}, status=400)
+                
+            data_timp_obj = datetime.strptime(f"{data_rez}T{ora_rez}:00", "%Y-%m-%dT%H:%M:%S")
+            
+            Reservation.objects.create(
+                restaurant=restaurant, user=user,
+                nume_client=f"{user.first_name} {user.last_name}".strip() or user.username,
+                data_timp=data_timp_obj, numar_persoane=int(data.get('persoane', 2)), status='Așteptare'
+            )
+            return JsonResponse({'message': 'Rezervare trimisă cu succes către restaurant!'})
+        except Exception as e: return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def api_user_reservations(request):
+    user = get_user_from_token(request)
+    if not user: return JsonResponse({'error': 'Neautorizat'}, status=401)
+    if request.method == 'GET':
+        from django.utils import timezone
+        rezervari = Reservation.objects.filter(user=user).order_by('-data_timp').select_related('restaurant')
+        now = timezone.now()
+        rez_list = [{
+            'id': r.id, 'restaurant_nume': r.restaurant.nume,
+            'data_timp': r.data_timp.strftime("%d/%m/%Y %H:%M"),
+            'persoane': r.numar_persoane, 'status': r.status,
+            'poate_da_rating': (r.status == 'Confirmat' and r.data_timp < now and r.nota_acordata is None),
+            'nota_acordata': r.nota_acordata
+        } for r in rezervari]
+        return JsonResponse(rez_list, safe=False)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def api_rate_reservation(request, res_id):
+    user = get_user_from_token(request)
+    if not user: return JsonResponse({'error': 'Neautorizat'}, status=401)
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            nota = int(data.get('nota', 0))
+            if not (1 <= nota <= 5): return JsonResponse({'error': 'Nota trebuie să fie între 1 și 5'}, status=400)
+            rez = Reservation.objects.get(id=res_id, user=user)
+            if rez.nota_acordata: return JsonResponse({'error': 'Ai votat deja!'}, status=400)
+            rez.nota_acordata = nota
+            rez.save()
+            # Recalculăm rating-ul restaurantului
+            rest = rez.restaurant
+            toate_notele = Reservation.objects.filter(restaurant=rest, nota_acordata__isnull=False).values_list('nota_acordata', flat=True)
+            rest.rating = round(sum(toate_notele) / len(toate_notele), 1)
+            rest.save()
+            return JsonResponse({'message': 'Nota salvată cu succes!'})
+        except Exception as e: return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
