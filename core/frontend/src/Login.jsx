@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+import toast from 'react-hot-toast';
 import './App.css';
 
 function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +21,7 @@ function Login() {
     setError('');
 
     if (!email.trim() || !password.trim()) {
-      setError('Te rog să completezi ambele câmpuri!');
+      toast.error('Te rog să completezi ambele câmpuri!');
       return;
     }
 
@@ -50,16 +53,14 @@ function Login() {
 
       if (response.ok) {
         console.log("Login successful:", data);
-        // SALVĂM STAREA DE OWNER ÎN MEMORIE
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('isOwner', data.isOwner);
-        localStorage.setItem('userEmail', data.email);
+        login(data.token, data.isOwner, data.email);
+        toast.success('Te-ai autentificat cu succes! 👋');
         navigate('/home');
       } else {
-        setError(data.error || 'A apărut o eroare la conectare.');
+        toast.error(data.error || 'A apărut o eroare la conectare.');
       }
     } catch (err) {
-      setError(err.message || 'A apărut o eroare la conectare. Încearcă din nou.');
+      toast.error(err.message || 'Eroare de conexiune cu serverul.');
       console.error('Login error:', err);
     } finally {
       setIsLoading(false);

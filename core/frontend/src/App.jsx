@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './Login';
 import Register from './Register';
 import RegisterSuccess from './RegisterSuccess';
@@ -11,33 +11,48 @@ import ForgotPassword from './ForgotPassword';
 import ResetPassword from './ResetPassword';
 import FoodTinder from './FoodTinder';
 import MyReservations from './MyReservations';
+import UserProfile from './UserProfile';
+import { AuthProvider } from './AuthContext';
+import { Toaster } from 'react-hot-toast';
+import { AnimatePresence } from 'framer-motion';
+import PageWrapper from './PageWrapper';
+
+function AnimatedRoutes() {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<Navigate to="/home" replace />} />
+        
+        <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+        <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
+        <Route path="/register-success" element={<PageWrapper><RegisterSuccess /></PageWrapper>} />
+        <Route path="/register-restaurant" element={<PageWrapper><RegisterRestaurant /></PageWrapper>} />
+        
+        <Route path="/home" element={<PageWrapper><Home /></PageWrapper>} />
+        <Route path="/owner-dashboard" element={<PageWrapper><OwnerDashboard /></PageWrapper>} />
+        <Route path="/dashboard/:id" element={<PageWrapper><Dashboard /></PageWrapper>} />
+        <Route path="/food-tinder" element={<PageWrapper><FoodTinder /></PageWrapper>} />
+        <Route path="/my-reservations" element={<PageWrapper><MyReservations /></PageWrapper>} />
+        <Route path="/profile" element={<PageWrapper><UserProfile /></PageWrapper>} />
+        
+        <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
+        <Route path="/reset-password/:uid/:token" element={<PageWrapper><ResetPassword /></PageWrapper>} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
 
 function App() {
   return (
-    <BrowserRouter>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Navigate to="/home" replace />} />
-        
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        
-        {/* Rutele noi adăugate azi */}
-        <Route path="/register-success" element={<RegisterSuccess />} />
-        <Route path="/register-restaurant" element={<RegisterRestaurant />} />
-        
-        {/* Placeholder pentru viitoarele pagini principale */}
-        <Route path="/home" element={<Home />} />
-        <Route path="/owner-dashboard" element={<OwnerDashboard />} />
-        <Route path="/dashboard/:id" element={<Dashboard />} />
-        <Route path="/food-tinder" element={<FoodTinder />} />
-        <Route path="/my-reservations" element={<MyReservations />} />
-        
-        {/* Rute pentru resetarea parolei */}
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
+        <Navbar />
+        <AnimatedRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

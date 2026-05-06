@@ -7,6 +7,7 @@ function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // State-uri pentru rezervare
   const [resDate, setResDate] = useState('');
@@ -88,8 +89,29 @@ function Home() {
 
       <div>
         <h2 style={{ marginBottom: '20px' }}>Restaurante Disponibile</h2>
+
+        {/* Bară de căutare dinamică */}
+        <div style={{ marginBottom: '30px' }}>
+          <input 
+            type="text" 
+            placeholder="🔍 Caută un restaurant după nume sau adresă..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: '100%', padding: '15px 20px', borderRadius: '30px', border: '1px solid #E5E5E5', fontSize: '1rem', outline: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', transition: 'border-color 0.3s' }}
+          />
+        </div>
         
-        {isLoading && <p>Se încarcă restaurantele...</p>}
+        {isLoading && (
+          <div className="restaurant-grid">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="skeleton-card">
+                <div className="skeleton-pulse" style={{ height: '28px', width: '70%' }}></div>
+                <div className="skeleton-pulse" style={{ height: '16px', width: '40%' }}></div>
+                <div className="skeleton-pulse" style={{ height: '60px', width: '100%', marginTop: 'auto' }}></div>
+              </div>
+            ))}
+          </div>
+        )}
         {error && <div className="error-message">{error}</div>}
         
         {!isLoading && !error && restaurants.length === 0 && (
@@ -98,7 +120,12 @@ function Home() {
 
         {!isLoading && !error && restaurants.length > 0 && (
           <div className="restaurant-grid">
-            {restaurants.map((rest) => (
+            {restaurants
+              .filter((rest) => 
+                rest.nume.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                rest.adresa.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map((rest) => (
               <div key={rest.id} onClick={() => handleCardClick(rest.id)} className="restaurant-card">
                 <h3 style={{ margin: '0 0 10px 0', color: '#1a1a1a', fontSize: '1.4rem' }}>{rest.nume}</h3>
                 <p style={{ margin: '0 0 15px 0', color: '#666', fontSize: '0.95rem' }}>📍 {rest.adresa}</p>
@@ -159,6 +186,18 @@ function Home() {
                       {selectedRestaurant.descriere}
                     </p>
                   )}
+                  
+                  {/* Integrare Harta Locației */}
+                  <div style={{ marginTop: '15px', borderRadius: '10px', overflow: 'hidden', height: '150px', border: '1px solid #ddd' }}>
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      frameBorder="0"
+                      style={{ border: 0 }}
+                      src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedRestaurant.adresa)}&output=embed`}
+                      allowFullScreen
+                    ></iframe>
+                  </div>
                 </div>
                 <button onClick={() => setSelectedRestaurant(null)} style={{ background: 'none', border: 'none', fontSize: '2rem', cursor: 'pointer', color: '#666', padding: 0, lineHeight: 1 }}>&times;</button>
               </div>
