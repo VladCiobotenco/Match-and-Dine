@@ -58,8 +58,8 @@ function RegisterRestaurant() {
 
   const handleGenerateDescription = async (e) => {
     e.preventDefault();
-    if (!formData.numeRestaurant || !formData.adresa) {
-      setError('Completează "Numele Restaurantului" și "Adresa completă" pentru a genera o descriere.');
+    if (!formData.numeRestaurant || !formData.specific) {
+      setError('Completează "Numele Restaurantului" și "specificul" pentru a genera o descriere.');
       return;
     }
     
@@ -72,7 +72,7 @@ function RegisterRestaurant() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ nume: formData.numeRestaurant, adresa: formData.adresa }),
+        body: JSON.stringify({ nume: formData.numeRestaurant, adresa: formData.specific }),
       });
       
       const data = await response.json();
