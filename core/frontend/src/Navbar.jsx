@@ -14,7 +14,10 @@ function Navbar() {
 
   return (
     <nav className="global-navbar" style={{ minHeight: '80px', display: 'flex', alignItems: 'center' }}>
-      <div className="navbar-brand">🍽️ Match & Dine</div>
+      <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <img src="/favicon.png" alt="Match & Dine logo" style={{ height: '60px' }} />
+        <span>Match & Dine</span>
+      </div>
       <div className="navbar-links" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
         <Link to="/home" style={{ textDecoration: 'none' }}>
           <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: '1px solid #E2001A', backgroundColor: location.pathname === '/home' ? '#E2001A' : 'white', color: location.pathname === '/home' ? 'white' : '#E2001A', fontWeight: 'bold' }}>
