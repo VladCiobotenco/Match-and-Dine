@@ -11,6 +11,7 @@ import ForgotPassword from './ForgotPassword';
 import ResetPassword from './ResetPassword';
 import FoodTinder from './FoodTinder';
 import MyReservations from './MyReservations';
+import About from './About';
 
 function App() {
   return (
@@ -28,6 +29,8 @@ function App() {
         
         {/* Placeholder pentru viitoarele pagini principale */}
         <Route path="/home" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/despre-noi" element={<About />} />
         <Route path="/owner-dashboard" element={<OwnerDashboard />} />
         <Route path="/dashboard/:id" element={<Dashboard />} />
         <Route path="/food-tinder" element={<FoodTinder />} />

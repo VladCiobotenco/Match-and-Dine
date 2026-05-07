@@ -31,6 +31,12 @@ function Navbar() {
           </button>
         </Link>
         
+        <Link to="/about" style={{ textDecoration: 'none' }}>
+          <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: '1px solid #E2001A', backgroundColor: location.pathname === '/despre-noi' ? '#E2001A' : 'white', color: location.pathname === '/despre-noi' ? 'white' : '#E2001A', fontWeight: 'bold' }}>
+            Despre Noi
+          </button>
+        </Link>
+        
         {isLoggedIn && (
           <Link to="/my-reservations" style={{ textDecoration: 'none' }}>
             <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: '1px solid #E2001A', backgroundColor: location.pathname === '/my-reservations' ? '#E2001A' : 'white', color: location.pathname === '/my-reservations' ? 'white' : '#E2001A', fontWeight: 'bold' }}>
