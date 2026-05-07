@@ -1,12 +1,12 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 import './App.css';
 
 function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isLoggedIn, isOwner, logout } = useAuth();
   
-  // Citim din memoria browserului
-  const isOwner = localStorage.getItem('isOwner') === 'true';
-  const isLoggedIn = !!localStorage.getItem('token');
 
   // Nu afișăm meniul pe paginile de login/register
   const hiddenRoutes = ['/login', '/register', '/register-success', '/register-restaurant'];
@@ -35,6 +35,14 @@ function Navbar() {
             </button>
           </Link>
         )}
+        
+        {isLoggedIn && (
+          <Link to="/profile" style={{ textDecoration: 'none' }}>
+            <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: '1px solid #E2001A', backgroundColor: location.pathname === '/profile' ? '#E2001A' : 'white', color: location.pathname === '/profile' ? 'white' : '#E2001A', fontWeight: 'bold' }}>
+              👤 Profil
+            </button>
+          </Link>
+        )}
 
         {/* Butonul de Dashboard apare DOAR dacă userul este owner */}
         {isOwner && (
@@ -46,11 +54,9 @@ function Navbar() {
         )}
         
         {isLoggedIn ? (
-          <Link to="/login" onClick={() => localStorage.clear()} style={{ textDecoration: 'none' }}>
-            <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: 'none', backgroundColor: '#6c757d', color: 'white', fontWeight: 'bold' }}>
-              Deconectare
-            </button>
-          </Link>
+          <button onClick={() => { logout(); navigate('/home'); }} style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: 'none', backgroundColor: '#6c757d', color: 'white', fontWeight: 'bold' }}>
+            Deconectare
+          </button>
         ) : (
           <Link to="/login" style={{ textDecoration: 'none' }}>
             <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: 'none', backgroundColor: '#E2001A', color: 'white', fontWeight: 'bold' }}>

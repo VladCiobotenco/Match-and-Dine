@@ -262,6 +262,18 @@ function FoodTinder() {
                     {selectedRestaurant.descriere}
                   </p>
                 )}
+                
+                {/* Integrare Harta Locației */}
+                <div style={{ marginTop: '15px', borderRadius: '10px', overflow: 'hidden', height: '150px', border: '1px solid #ddd' }}>
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    style={{ border: 0 }}
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedRestaurant.adresa)}&output=embed`}
+                    allowFullScreen
+                  ></iframe>
+                </div>
               </div>
               <button onClick={() => setSelectedRestaurant(null)} style={{ background: 'none', border: 'none', fontSize: '2rem', cursor: 'pointer', color: '#666', padding: 0, lineHeight: 1 }}>&times;</button>
             </div>
