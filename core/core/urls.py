@@ -16,8 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from backend import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('backend.urls')),
+    path('api/user-reservations/', views.api_user_reservations, name='user_reservations'),
+    path('api/rate-reservation/<int:res_id>/', views.api_rate_reservation, name='rate_reservation'),
+
 ]

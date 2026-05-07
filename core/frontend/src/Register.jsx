@@ -45,11 +45,12 @@ function Register() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/register/', {
+      const response = await fetch('/api/register/', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           nume: formData.nume,
           prenume: formData.prenume,
@@ -62,6 +63,10 @@ function Register() {
       const data = await response.json();
 
       if (response.ok) {
+        // Logăm utilizatorul automat salvând token-ul primit
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('isOwner', data.isOwner);
+        localStorage.setItem('userEmail', data.email);
         navigate('/register-success');
       } else {
         setError(data.error || 'Eroare la crearea contului. Încearcă din nou.');

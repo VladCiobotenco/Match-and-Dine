@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Am adăugat importurile pentru rutare
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+import toast from 'react-hot-toast';
 import './App.css';
 
 function Login() {
-  const navigate = useNavigate(); // Am inițializat ofițerul de trafic
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
-  // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   
-  // UI state
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,9 +20,8 @@ function Login() {
     e.preventDefault();
     setError('');
 
-    // Basic validation
     if (!email.trim() || !password.trim()) {
-      setError('Te rog să completezi ambele câmpuri!');
+      toast.error('Te rog să completezi ambele câmpuri!');
       return;
     }
 
@@ -33,25 +33,34 @@ function Login() {
         password, 
       };
 
-      const response = await fetch('http://127.0.0.1:8000/api/login/', {
+      const response = await fetch('/api/login/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+        headers: { 
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      // Parse JSON only when available; otherwise report a server error
+      let data = {};
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        throw new Error(`Eroare Server: ${response.status} ${response.statusText}`);
+      }
 
       if (response.ok) {
         console.log("Login successful:", data);
-        // Am activat navigarea automată către Home!
+        login(data.token, data.isOwner, data.email);
+        toast.success('Te-ai autentificat cu succes! 👋');
         navigate('/home');
       } else {
-        setError(data.error || 'A apărut o eroare la conectare.');
+        toast.error(data.error || 'A apărut o eroare la conectare.');
       }
     } catch (err) {
-      setError('A apărut o eroare la conectare. Încearcă din nou.');
+      toast.error(err.message || 'Eroare de conexiune cu serverul.');
       console.error('Login error:', err);
     } finally {
       setIsLoading(false);
@@ -64,20 +73,14 @@ function Login() {
       <h2>Autentificare</h2>
 
       <form onSubmit={handleLogin}>
-        
-        {/* Error message render */}
         {error && <div className="error-message">{error}</div>}
         
         <div className="input-group">
           <label htmlFor="email">Email</label>
           <input 
-            id="email"
-            type="email" 
-            placeholder="Introdu adresa de email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={isLoading}
-            autoComplete="email"
+            id="email" type="email" placeholder="Introdu adresa de email"
+            value={email} onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading} autoComplete="email"
           />
         </div>
 
@@ -85,19 +88,11 @@ function Login() {
           <label htmlFor="password">Parolă</label>
           <div className="password-container">
             <input 
-              id="password"
-              type={showPassword ? 'text' : 'password'} 
-              placeholder="Introdu parola"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-              autoComplete="current-password"
+              id="password" type={showPassword ? 'text' : 'password'} placeholder="Introdu parola"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading} autoComplete="current-password"
             />
-            <button 
-              type="button" 
-              onClick={() => setShowPassword(!showPassword)}
-              disabled={isLoading}
-            >
+            <button type="button" onClick={() => setShowPassword(!showPassword)} disabled={isLoading}>
               {showPassword ? 'Ascunde' : 'Arată'}
             </button>
           </div>
@@ -105,18 +100,12 @@ function Login() {
 
         <div className="input-group checkbox-group">
           <label>
-            <input 
-              type="checkbox" 
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)} 
-              disabled={isLoading}
-            />
+            <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} disabled={isLoading} />
             Ține-mă minte
           </label>
         </div>
 
         <div className="forgot-password">
-          {/* Folosim Link în loc de ancoră HTML */}
           <Link to="/forgot-password">Ai uitat parola?</Link>
         </div>
 
@@ -125,10 +114,8 @@ function Login() {
         </button>
 
         <div className="register-link">
-          {/* Folosim Link în loc de ancoră HTML */}
           Nu ai cont? <Link to="/register">Înregistrează-te</Link>
         </div>
-
       </form>
     </div>
   );
