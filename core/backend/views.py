@@ -17,16 +17,26 @@ from django.core.mail import send_mail
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from django.views.decorators.csrf import csrf_exempt
+
 
 def get_user_from_token(request):
     auth_header = request.headers.get('Authorization')
-    if auth_header and auth_header.startswith('Bearer '):
+    if not auth_header:
+        print("DEBUG AUTH: Header-ul 'Authorization' lipsește complet din cererea frontend-ului!")
+        return None
+        
+    if auth_header.startswith('Bearer '):
         token = auth_header.split(' ')[1]
         try:
             data = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
             return User.objects.get(id=data['user_id'])
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, User.DoesNotExist):
-            return None
+        except jwt.ExpiredSignatureError:
+            print("DEBUG AUTH: Token-ul a expirat!")
+        except jwt.InvalidTokenError:
+            print("DEBUG AUTH: Token-ul este invalid!")
+        except User.DoesNotExist:
+            print("DEBUG AUTH: Utilizatorul asociat cu acest token nu mai există în baza de date (probabil baza de date a fost ștearsă/resetată)!")
     return None
 
 def api_login(request):
