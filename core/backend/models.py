@@ -10,6 +10,7 @@ class UserProfile(models.Model):
     gastronomie_preferata = models.CharField(max_length=150, blank=True, null=True)
     fel_de_mancare_preferat = models.CharField(max_length=150, blank=True, null=True)
     bautura_preferata = models.CharField(max_length=150, blank=True, null=True)
+    is_admin = models.CharField(max_length=10, default="no")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -24,6 +25,7 @@ class Restaurant(models.Model):
     email_contact = models.EmailField(unique=True)
     descriere = models.TextField(blank=True, null=True)
     rating = models.FloatField(default=0.0)
+    is_approved = models.CharField(max_length=10, default="no")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -56,3 +58,11 @@ class UserInteraction(models.Model):
 
     class Meta:
         unique_together = ('user', 'restaurant')
+
+class BannedRestaurant(models.Model):
+    nume = models.CharField(max_length=100)
+    adresa = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nume} ({self.adresa})"

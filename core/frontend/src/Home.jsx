@@ -8,6 +8,11 @@ function Home() {
   const [error, setError] = useState('');
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
   
   // State-uri pentru rezervare
   const [resDate, setResDate] = useState('');
@@ -118,29 +123,83 @@ function Home() {
           <p>Nu există restaurante înregistrate momentan.</p>
         )}
 
-        {!isLoading && !error && restaurants.length > 0 && (
-          <div className="restaurant-grid">
-            {restaurants
-              .filter((rest) => 
-                rest.nume.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                rest.adresa.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-              .map((rest) => (
-              <div key={rest.id} onClick={() => handleCardClick(rest.id)} className="restaurant-card">
-                <h3 style={{ margin: '0 0 10px 0', color: '#1a1a1a', fontSize: '1.4rem' }}>{rest.nume}</h3>
-                <p style={{ margin: '0 0 15px 0', color: '#666', fontSize: '0.95rem' }}>📍 {rest.adresa}</p>
-                {rest.descriere && (
-                  <p style={{ margin: '0 0 20px 0', color: '#444', fontSize: '0.95rem', fontStyle: 'italic', flexGrow: 1 }}>
-                    {rest.descriere.length > 100 ? `${rest.descriere.substring(0, 100)}...` : rest.descriere}
-                  </p>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#f5b041', fontWeight: 'bold' }}>⭐ {rest.rating}</span>
+        {!isLoading && !error && restaurants.length > 0 && (() => {
+          const filtered = restaurants.filter((rest) => 
+            rest.nume.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            rest.adresa.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+          
+          const totalPages = Math.ceil(filtered.length / 10);
+          const paginated = filtered.slice((currentPage - 1) * 10, currentPage * 10);
+          
+          return (
+            <>
+              {paginated.length === 0 ? (
+                <p>Nu s-a găsit niciun restaurant conform criteriilor.</p>
+              ) : (
+                <div className="restaurant-grid">
+                  {paginated.map((rest) => (
+                    <div key={rest.id} onClick={() => handleCardClick(rest.id)} className="restaurant-card">
+                      <h3 style={{ margin: '0 0 10px 0', color: '#1a1a1a', fontSize: '1.4rem' }}>{rest.nume}</h3>
+                      <p style={{ margin: '0 0 15px 0', color: '#666', fontSize: '0.95rem' }}>📍 {rest.adresa}</p>
+                      {rest.descriere && (
+                        <p style={{ margin: '0 0 20px 0', color: '#444', fontSize: '0.95rem', fontStyle: 'italic', flexGrow: 1 }}>
+                          {rest.descriere.length > 100 ? `${rest.descriere.substring(0, 100)}...` : rest.descriere}
+                        </p>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#f5b041', fontWeight: 'bold' }}>⭐ {rest.rating}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              )}
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '40px', flexWrap: 'wrap' }}>
+                  <button 
+                    disabled={currentPage === 1} 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className="login-button"
+                    style={{ width: 'auto', padding: '10px 15px', backgroundColor: currentPage === 1 ? '#ccc' : '#1a1a1a', color: '#fff', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', margin: 0 }}
+                  >
+                    &laquo; Înapoi
+                  </button>
+                  
+                  {[...Array(totalPages)].map((_, index) => (
+                    <button 
+                      key={index} 
+                      onClick={() => setCurrentPage(index + 1)}
+                      className="login-button"
+                      style={{ 
+                        width: 'auto', 
+                        padding: '10px 16px', 
+                        backgroundColor: currentPage === index + 1 ? '#E2001A' : '#fff', 
+                        color: currentPage === index + 1 ? '#fff' : '#E2001A', 
+                        border: '1px solid #E2001A', 
+                        cursor: 'pointer', 
+                        fontWeight: 'bold',
+                        margin: 0
+                      }}
+                    >
+                      {index + 1}
+                    </button>
+                  ))}
+                  
+                  <button 
+                    disabled={currentPage === totalPages} 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className="login-button"
+                    style={{ width: 'auto', padding: '10px 15px', backgroundColor: currentPage === totalPages ? '#ccc' : '#1a1a1a', color: '#fff', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', margin: 0 }}
+                  >
+                    Înainte &raquo;
+                  </button>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {selectedRestaurant && (
           <div
