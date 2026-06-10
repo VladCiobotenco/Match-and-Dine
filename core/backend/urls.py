@@ -21,4 +21,9 @@ urlpatterns = [
     path('restaurants/<int:pk>/reserve/', views.api_create_reservation, name='api_create_reservation'),
     path('my-reservations/', views.api_user_reservations, name='api_user_reservations'),
     path('rate-reservation/<int:res_id>/', views.api_rate_reservation, name='api_rate_reservation'),
+    path('admin/pending-restaurants/', views.api_admin_pending_restaurants),
+    path('admin/approve-restaurant/<int:pk>/', views.api_admin_approve_restaurant),
+    path('admin/ban-restaurant/<int:pk>/', views.api_admin_ban_restaurant),
+    path('admin/banned-restaurants/', views.api_admin_banned_restaurants),
+    path('profile/', views.api_get_profile),
 ]

@@ -7,7 +7,7 @@ from django.db import IntegrityError
 from django.core import signing
 import jwt
 from django.conf import settings
-from .models import UserProfile, Restaurant, MenuItem, Reservation, UserInteraction
+from .models import UserProfile, Restaurant, MenuItem, Reservation, UserInteraction, BannedRestaurant
 from datetime import datetime, timedelta, timezone
 import time
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
@@ -61,10 +61,18 @@ def api_login(request):
                 token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
                 # Verificăm strict dacă ACEST user are un restaurant înregistrat
                 is_owner = Restaurant.objects.filter(owner=user).exists()
+                
+                try:
+                    profile = user.userprofile
+                    is_admin = profile.is_admin
+                except UserProfile.DoesNotExist:
+                    is_admin = 'no'
+
                 return JsonResponse({
                     'message': 'Login successful', 
                     'email': user.email,
                     'isOwner': is_owner,
+                    'isAdmin': is_admin,
                     'token': token
                 })
             else:
@@ -183,7 +191,8 @@ def api_register(request):
                 'message': 'Cont creat cu succes', 
                 'email': user.email,
                 'token': token,
-                'isOwner': False
+                'isOwner': False,
+                'isAdmin': 'no'
             })
 
         except IntegrityError:
@@ -194,7 +203,7 @@ def api_register(request):
 
 def api_get_restaurants(request):
     if request.method == 'GET':
-        restaurants = Restaurant.objects.all().values('id', 'nume', 'adresa', 'rating', 'descriere')
+        restaurants = Restaurant.objects.filter(is_approved='yes').values('id', 'nume', 'adresa', 'rating', 'descriere')
         return JsonResponse(list(restaurants), safe=False)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -202,6 +211,17 @@ def api_get_restaurant_details(request, pk):
     if request.method == 'GET':
         try:
             restaurant = Restaurant.objects.get(pk=pk)
+            if restaurant.is_approved != 'yes':
+                user = get_user_from_token(request)
+                is_admin_flag = False
+                if user:
+                    try:
+                        is_admin_flag = user.userprofile.is_admin == 'yes'
+                    except UserProfile.DoesNotExist:
+                        pass
+                if not user or (restaurant.owner != user and not is_admin_flag):
+                    return JsonResponse({'error': 'Acest restaurant nu este aprobat încă.'}, status=403)
+
             menu_items = MenuItem.objects.filter(restaurant=restaurant).values('id', 'nume', 'pret', 'categorie')
             
             data = {
@@ -225,7 +245,7 @@ def api_owner_restaurants(request):
         return JsonResponse({'error': 'Neautorizat'}, status=401)
         
     if request.method == 'GET':
-        restaurants = Restaurant.objects.filter(owner=user).values('id', 'nume', 'adresa', 'rating')
+        restaurants = Restaurant.objects.filter(owner=user).values('id', 'nume', 'adresa', 'rating', 'is_approved')
         return JsonResponse(list(restaurants), safe=False)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -399,7 +419,7 @@ def api_swipe_deck(request):
             interacted_ids = UserInteraction.objects.filter(user=user).values_list('restaurant_id', flat=True)
             
             # Excludem cele respinse sau apreciate pentru a avea un deck proaspăt. Limităm la 10 carduri.
-            restaurants = Restaurant.objects.exclude(id__in=interacted_ids)[:10]
+            restaurants = Restaurant.objects.filter(is_approved='yes').exclude(id__in=interacted_ids)[:10]
             
             deck = list(restaurants.values('id', 'nume', 'adresa', 'descriere', 'rating'))
             
@@ -505,4 +525,146 @@ def api_rate_reservation(request, res_id):
             rest.save()
             return JsonResponse({'message': 'Nota salvată cu succes!'})
         except Exception as e: return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def api_admin_pending_restaurants(request):
+    user = get_user_from_token(request)
+    if not user:
+        return JsonResponse({'error': 'Neautorizat'}, status=401)
+    
+    try:
+        profile = user.userprofile
+        if profile.is_admin != 'yes':
+            return JsonResponse({'error': 'Acces interzis. Nu sunteți administrator.'}, status=403)
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'error': 'Acces interzis. Profil inexistent.'}, status=403)
+
+    if request.method == 'GET':
+        # Return all restaurants where is_approved is 'no'
+        pending = Restaurant.objects.filter(is_approved='no').values('id', 'nume', 'adresa', 'telefon_contact', 'email_contact', 'descriere', 'rating', 'owner__email')
+        return JsonResponse(list(pending), safe=False)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def api_admin_approve_restaurant(request, pk):
+    user = get_user_from_token(request)
+    if not user:
+        return JsonResponse({'error': 'Neautorizat'}, status=401)
+    
+    try:
+        profile = user.userprofile
+        if profile.is_admin != 'yes':
+            return JsonResponse({'error': 'Acces interzis. Nu sunteți administrator.'}, status=403)
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'error': 'Acces interzis. Profil inexistent.'}, status=403)
+
+    if request.method == 'POST':
+        try:
+            restaurant = Restaurant.objects.get(pk=pk)
+            restaurant.is_approved = 'yes'
+            restaurant.save()
+            return JsonResponse({'message': 'Restaurantul a fost aprobat cu succes.'})
+        except Restaurant.DoesNotExist:
+            return JsonResponse({'error': 'Restaurantul nu a fost găsit.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+            
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def api_admin_ban_restaurant(request, pk):
+    user = get_user_from_token(request)
+    if not user:
+        return JsonResponse({'error': 'Neautorizat'}, status=401)
+    
+    try:
+        profile = user.userprofile
+        if profile.is_admin != 'yes':
+            return JsonResponse({'error': 'Acces interzis. Nu sunteți administrator.'}, status=403)
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'error': 'Acces interzis. Profil inexistent.'}, status=403)
+
+    if request.method == 'POST':
+        try:
+            restaurant = Restaurant.objects.get(pk=pk)
+            # Add to banned restaurants table
+            BannedRestaurant.objects.create(
+                nume=restaurant.nume,
+                adresa=restaurant.adresa
+            )
+            # Delete from restaurants table
+            restaurant.delete()
+            return JsonResponse({'message': 'Restaurantul a fost adăugat în lista neagră și șters cu succes.'})
+        except Restaurant.DoesNotExist:
+            return JsonResponse({'error': 'Restaurantul nu a fost găsit.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+            
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def api_admin_banned_restaurants(request):
+    user = get_user_from_token(request)
+    if not user:
+        return JsonResponse({'error': 'Neautorizat'}, status=401)
+    
+    # We allow general search_by_name and search_by_address parameters
+    search_name = request.GET.get('search_name', '').strip()
+    search_address = request.GET.get('search_address', '').strip()
+    
+    queryset = BannedRestaurant.objects.all()
+    if search_name:
+        queryset = queryset.filter(nume__icontains=search_name)
+    if search_address:
+        queryset = queryset.filter(adresa__icontains=search_address)
+        
+    banned_list = list(queryset.values('id', 'nume', 'adresa', 'created_at'))
+    return JsonResponse(banned_list, safe=False)
+
+@csrf_exempt
+def api_get_profile(request):
+    user = get_user_from_token(request)
+    if not user:
+        return JsonResponse({'error': 'Neautorizat'}, status=401)
+        
+    if request.method == 'GET':
+        try:
+            profile = user.userprofile
+            data = {
+                'email': profile.email,
+                'telefon': profile.telefon or '',
+                'gastronomie_preferata': profile.gastronomie_preferata or '',
+                'fel_de_mancare_preferat': profile.fel_de_mancare_preferat or '',
+                'bautura_preferata': profile.bautura_preferata or '',
+                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M') if user.date_joined else ''
+            }
+            return JsonResponse(data)
+        except UserProfile.DoesNotExist:
+            profile = UserProfile.objects.create(
+                user=user,
+                nume=user.last_name or 'User',
+                prenume=user.first_name or '',
+                email=user.email
+            )
+            data = {
+                'email': profile.email,
+                'telefon': '',
+                'gastronomie_preferata': '',
+                'fel_de_mancare_preferat': '',
+                'bautura_preferata': '',
+                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M') if user.date_joined else ''
+            }
+            return JsonResponse(data)
+            
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            profile, created = UserProfile.objects.get_or_create(user=user, defaults={'email': user.email})
+            profile.telefon = data.get('telefon', profile.telefon)
+            profile.gastronomie_preferata = data.get('gastronomie_preferata', profile.gastronomie_preferata)
+            profile.fel_de_mancare_preferat = data.get('fel_de_mancare_preferat', profile.fel_de_mancare_preferat)
+            profile.bautura_preferata = data.get('bautura_preferata', profile.bautura_preferata)
+            profile.save()
+            return JsonResponse({'message': 'Profilul a fost salvat cu succes!'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+            
     return JsonResponse({'error': 'Method not allowed'}, status=405)

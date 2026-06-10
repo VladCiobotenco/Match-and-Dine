@@ -53,7 +53,7 @@ function Login() {
 
       if (response.ok) {
         console.log("Login successful:", data);
-        login(data.token, data.isOwner, data.email);
+        login(data.token, data.isOwner, data.email, data.isAdmin);
         toast.success('Te-ai autentificat cu succes! 👋');
         navigate('/home');
       } else {
