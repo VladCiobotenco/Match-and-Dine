@@ -54,11 +54,7 @@ function FoodTinder() {
 
     // Așteptăm să se termine animația CSS (500ms) înainte să schimbăm cardul
     setTimeout(async () => {
-      // Eliminăm restaurantul curent din pachet
-      setDeck((prevDeck) => prevDeck.filter(r => r.id !== restaurantId));
-      setSwipeDirection(null); // Resetăm starea de swipe pentru următorul card
-
-      // Înregistrăm acțiunea în backend
+      // 1. Înregistrăm acțiunea în backend MAI ÎNTÂI
       try {
         await fetch('http://127.0.0.1:8000/api/record-swipe/', {
           method: 'POST',
@@ -71,6 +67,10 @@ function FoodTinder() {
       } catch (err) {
         console.error("Eroare la salvarea preferinței:", err);
       }
+      
+      // 2. Apoi eliminăm restaurantul curent din pachet pentru a declanșa useEffect-ul care preia scorul actualizat
+      setDeck((prevDeck) => prevDeck.filter(r => r.id !== restaurantId));
+      setSwipeDirection(null); 
     }, 500); 
   };
 
@@ -131,6 +131,24 @@ function FoodTinder() {
       }
     } catch (err) {
       setBookingMsg('Eroare de conexiune.');
+    }
+  };
+
+  const handleResetSwipes = async () => {
+    if (!window.confirm("Ești sigur că vrei să resetezi istoricul? Acest lucru îți va șterge topul curent și vei putea revedea toate restaurantele.")) return;
+    
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/reset-swipes/', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        setLikedMatches([]);
+        setHasSearched(false);
+        setPrompt('');
+      }
+    } catch(err) {
+      console.error("Eroare la resetare:", err);
     }
   };
 
@@ -211,6 +229,9 @@ function FoodTinder() {
               
               <button onClick={() => { setHasSearched(false); setPrompt(''); setLikedMatches([]); }} className="login-button" style={{ marginTop: '20px' }}>
                 Caută altceva
+              </button>
+              <button onClick={handleResetSwipes} className="login-button" style={{ marginTop: '10px', backgroundColor: '#666' }}>
+                🔄 Resetează istoricul
               </button>
             </div>
           )}
