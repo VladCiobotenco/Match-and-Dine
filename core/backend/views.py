@@ -18,6 +18,9 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
+import google.generativeai as genai
+import re
+import random
 
 
 def get_user_from_token(request):
@@ -59,6 +62,10 @@ def api_login(request):
                     'iat': datetime.now(timezone.utc)
                 }
                 token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+                
+                if isinstance(token, bytes):
+                    token = token.decode('utf-8')
+                    
                 # Verificăm strict dacă ACEST user are un restaurant înregistrat
                 is_owner = Restaurant.objects.filter(owner=user).exists()
                 
@@ -125,12 +132,15 @@ def api_generate_description(request):
         try:
             data = json.loads(request.body)
             nume = data.get('nume', '').strip()
-            adresa = data.get('adresa', '').strip()
             
-            if not nume or not adresa:
-                return JsonResponse({'error': 'Numele și adresa sunt obligatorii pentru a genera o descriere'}, status=400)
+            specific = data.get('specific', '').strip()
+            if not specific:
+                specific = data.get('adresa', '').strip()
             
-            return send_ai_description_response(nume, adresa)
+            if not nume or not specific:
+                return JsonResponse({'error': 'Numele și specificul sunt obligatorii pentru a genera o descriere'}, status=400)
+            
+            return send_ai_description_response(nume, specific)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -187,6 +197,10 @@ def api_register(request):
                 'iat': datetime.now(timezone.utc)
             }
             token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+            
+            if isinstance(token, bytes):
+                token = token.decode('utf-8')
+                
             return JsonResponse({
                 'message': 'Cont creat cu succes', 
                 'email': user.email,
@@ -414,19 +428,69 @@ def api_swipe_deck(request):
             data = json.loads(request.body)
             prompt = data.get('prompt', '')
             
-            # --- AICI VA FI INTEGRAT AL DOILEA AI ---
-            # Momentan simulăm comportamentul filtrând restaurantele cu care userul a interacționat deja.
             interacted_ids = UserInteraction.objects.filter(user=user).values_list('restaurant_id', flat=True)
+            available_restaurants = Restaurant.objects.exclude(id__in=interacted_ids).prefetch_related('menu_items')
+            deck = []
+            print(f"DEBUG: Restaurante disponibile (neswipate): {available_restaurants.count()}")
             
-            # Excludem cele respinse sau apreciate pentru a avea un deck proaspăt. Limităm la 10 carduri.
-            restaurants = Restaurant.objects.filter(is_approved='yes').exclude(id__in=interacted_ids)[:10]
-            
-            deck = list(restaurants.values('id', 'nume', 'adresa', 'descriere', 'rating'))
-            
-            import random
-            for r in deck:
-                r['matchScore'] = random.randint(75, 98) # Fake match score pentru UI
-                
+            if prompt and hasattr(settings, 'GEMINI_API_KEY') and settings.GEMINI_API_KEY != 'YOUR_GEMINI_API_KEY':
+                try:
+                    genai.configure(api_key=settings.GEMINI_API_KEY)
+                    model = genai.GenerativeModel('gemini-3.5-flash')
+                    
+                    restaurants_data = []
+                    for r in available_restaurants:
+                        menu_items = list(r.menu_items.values_list('nume', flat=True))
+                        restaurants_data.append({
+                            "id": r.id,
+                            "nume": r.nume,
+                            "descriere": r.descriere or "",
+                            "meniu": menu_items
+                        })
+                    
+                    ai_prompt = f"""
+                    You are a smart food recommendation assistant. The user is looking for: "{prompt}"
+                    
+                    Here is a list of available restaurants in JSON format:
+                    {json.dumps(restaurants_data, ensure_ascii=False)}
+                    
+                    CRITICAL INSTRUCTIONS:
+                    1. Read the "descriere" and "meniu" of EACH restaurant carefully.
+                    2. SMART FILTERING: Find the best matches. It does not have to be a 100% exact keyword match. If they want a specific food, find restaurants that serve it, or have a highly related cuisine (e.g., recommend an Italian place for pasta).
+                    3. Do NOT add completely unrelated restaurants (e.g., do not recommend a burger joint if they ask for sushi).
+                    4. Select up to 8 good matches. If absolutely nothing is even a loose match, return an empty array [].
+                    5. Assign a 'matchScore' (1 to 100). Perfect matches get 90-100, loose/related matches get 70-89.
+                    5. Return ONLY a raw JSON array of objects, where each object has 'id' (the restaurant id) and 'matchScore'.
+                    Example: [{{"id": 1, "matchScore": 95}}] or []
+                    Do not include any markdown formatting or additional text, just the raw JSON.
+                    """
+                    
+                    response = model.generate_content(ai_prompt)
+                    response_text = response.text.strip()
+                    print(f"DEBUG: Răspuns Gemini: {response_text}")
+                    
+                    # Use Regex to extract ONLY the JSON array, ignoring any extra conversational text
+                    match = re.search(r'\[.*\]', response_text, re.DOTALL)
+                    if match:
+                        clean_json = match.group(0)
+                        recommended_data = json.loads(clean_json)
+                    else:
+                        print("DEBUG: Nu s-a găsit un array JSON valid în răspuns!")
+                        recommended_data = []
+                    
+                    if recommended_data:
+                        recommended_ids = [item['id'] for item in recommended_data]
+                        score_map = {item['id']: item['matchScore'] for item in recommended_data}
+                        
+                        selected_restaurants = Restaurant.objects.filter(id__in=recommended_ids)
+                        deck = [{'id': r.id, 'nume': r.nume, 'adresa': r.adresa, 'descriere': r.descriere, 'rating': r.rating, 'matchScore': score_map.get(r.id, 80)} for r in selected_restaurants]
+                        
+                        # Sort results by the AI's highest matchScore
+                        deck.sort(key=lambda x: x['matchScore'], reverse=True)
+                        
+                except Exception as e:
+                    print(f"Eroare Gemini AI la Swipe Deck: {e}")
+                    
             return JsonResponse(deck, safe=False)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
@@ -527,144 +591,12 @@ def api_rate_reservation(request, res_id):
         except Exception as e: return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-def api_admin_pending_restaurants(request):
+def api_reset_swipes(request):
     user = get_user_from_token(request)
-    if not user:
-        return JsonResponse({'error': 'Neautorizat'}, status=401)
-    
-    try:
-        profile = user.userprofile
-        if profile.is_admin != 'yes':
-            return JsonResponse({'error': 'Acces interzis. Nu sunteți administrator.'}, status=403)
-    except UserProfile.DoesNotExist:
-        return JsonResponse({'error': 'Acces interzis. Profil inexistent.'}, status=403)
-
-    if request.method == 'GET':
-        # Return all restaurants where is_approved is 'no'
-        pending = Restaurant.objects.filter(is_approved='no').values('id', 'nume', 'adresa', 'telefon_contact', 'email_contact', 'descriere', 'rating', 'owner__email')
-        return JsonResponse(list(pending), safe=False)
-    
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-def api_admin_approve_restaurant(request, pk):
-    user = get_user_from_token(request)
-    if not user:
-        return JsonResponse({'error': 'Neautorizat'}, status=401)
-    
-    try:
-        profile = user.userprofile
-        if profile.is_admin != 'yes':
-            return JsonResponse({'error': 'Acces interzis. Nu sunteți administrator.'}, status=403)
-    except UserProfile.DoesNotExist:
-        return JsonResponse({'error': 'Acces interzis. Profil inexistent.'}, status=403)
-
-    if request.method == 'POST':
-        try:
-            restaurant = Restaurant.objects.get(pk=pk)
-            restaurant.is_approved = 'yes'
-            restaurant.save()
-            return JsonResponse({'message': 'Restaurantul a fost aprobat cu succes.'})
-        except Restaurant.DoesNotExist:
-            return JsonResponse({'error': 'Restaurantul nu a fost găsit.'}, status=404)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-            
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-def api_admin_ban_restaurant(request, pk):
-    user = get_user_from_token(request)
-    if not user:
-        return JsonResponse({'error': 'Neautorizat'}, status=401)
-    
-    try:
-        profile = user.userprofile
-        if profile.is_admin != 'yes':
-            return JsonResponse({'error': 'Acces interzis. Nu sunteți administrator.'}, status=403)
-    except UserProfile.DoesNotExist:
-        return JsonResponse({'error': 'Acces interzis. Profil inexistent.'}, status=403)
-
-    if request.method == 'POST':
-        try:
-            restaurant = Restaurant.objects.get(pk=pk)
-            # Add to banned restaurants table
-            BannedRestaurant.objects.create(
-                nume=restaurant.nume,
-                adresa=restaurant.adresa
-            )
-            # Delete from restaurants table
-            restaurant.delete()
-            return JsonResponse({'message': 'Restaurantul a fost adăugat în lista neagră și șters cu succes.'})
-        except Restaurant.DoesNotExist:
-            return JsonResponse({'error': 'Restaurantul nu a fost găsit.'}, status=404)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-            
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-def api_admin_banned_restaurants(request):
-    user = get_user_from_token(request)
-    if not user:
-        return JsonResponse({'error': 'Neautorizat'}, status=401)
-    
-    # We allow general search_by_name and search_by_address parameters
-    search_name = request.GET.get('search_name', '').strip()
-    search_address = request.GET.get('search_address', '').strip()
-    
-    queryset = BannedRestaurant.objects.all()
-    if search_name:
-        queryset = queryset.filter(nume__icontains=search_name)
-    if search_address:
-        queryset = queryset.filter(adresa__icontains=search_address)
+    if not user: return JsonResponse({'error': 'Neautorizat'}, status=401)
         
-    banned_list = list(queryset.values('id', 'nume', 'adresa', 'created_at'))
-    return JsonResponse(banned_list, safe=False)
-
-@csrf_exempt
-def api_get_profile(request):
-    user = get_user_from_token(request)
-    if not user:
-        return JsonResponse({'error': 'Neautorizat'}, status=401)
+    if request.method == 'POST':
+        UserInteraction.objects.filter(user=user).delete()
+        return JsonResponse({'message': 'Istoricul de swipe a fost resetat cu succes!'})
         
-    if request.method == 'GET':
-        try:
-            profile = user.userprofile
-            data = {
-                'email': profile.email,
-                'telefon': profile.telefon or '',
-                'gastronomie_preferata': profile.gastronomie_preferata or '',
-                'fel_de_mancare_preferat': profile.fel_de_mancare_preferat or '',
-                'bautura_preferata': profile.bautura_preferata or '',
-                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M') if user.date_joined else ''
-            }
-            return JsonResponse(data)
-        except UserProfile.DoesNotExist:
-            profile = UserProfile.objects.create(
-                user=user,
-                nume=user.last_name or 'User',
-                prenume=user.first_name or '',
-                email=user.email
-            )
-            data = {
-                'email': profile.email,
-                'telefon': '',
-                'gastronomie_preferata': '',
-                'fel_de_mancare_preferat': '',
-                'bautura_preferata': '',
-                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M') if user.date_joined else ''
-            }
-            return JsonResponse(data)
-            
-    elif request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            profile, created = UserProfile.objects.get_or_create(user=user, defaults={'email': user.email})
-            profile.telefon = data.get('telefon', profile.telefon)
-            profile.gastronomie_preferata = data.get('gastronomie_preferata', profile.gastronomie_preferata)
-            profile.fel_de_mancare_preferat = data.get('fel_de_mancare_preferat', profile.fel_de_mancare_preferat)
-            profile.bautura_preferata = data.get('bautura_preferata', profile.bautura_preferata)
-            profile.save()
-            return JsonResponse({'message': 'Profilul a fost salvat cu succes!'})
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-            
     return JsonResponse({'error': 'Method not allowed'}, status=405)

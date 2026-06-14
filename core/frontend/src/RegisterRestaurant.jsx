@@ -75,7 +75,7 @@ function RegisterRestaurant() {
           'Content-Type': 'application/json'
         },
         credentials: 'include',
-        body: JSON.stringify({ nume: formData.numeRestaurant, adresa: formData.adresa }),
+        body: JSON.stringify({ nume: formData.numeRestaurant, specific: formData.specific }),
       });
       
       const data = await response.json();

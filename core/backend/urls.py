@@ -17,6 +17,7 @@ urlpatterns = [
     path('password-reset/confirm/', views.api_password_reset_confirm, name='password_reset_confirm'),
     path('swipe-deck/', views.api_swipe_deck, name='api_swipe_deck'),
     path('record-swipe/', views.api_record_swipe, name='api_record_swipe'),
+    path('reset-swipes/', views.api_reset_swipes, name='api_reset_swipes'),
     path('my-matches/', views.api_my_matches, name='api_my_matches'),
     path('restaurants/<int:pk>/reserve/', views.api_create_reservation, name='api_create_reservation'),
     path('my-reservations/', views.api_user_reservations, name='api_user_reservations'),
