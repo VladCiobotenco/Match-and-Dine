@@ -34,7 +34,7 @@ strazi = ["Victoriei", "Eminescu", "Unirii", "Independenței", "Libertății", "
 sufixe = ['Premium', 'Bistro', 'Express', 'Lounge', 'Garden', 'Downtown', 'Classic', 'Gold', '& Co', 'Star']
 
 def seed():
-    print("Ștergem datele vechi (pentru a curăța orfanii)...")
+    print("Stergem datele vechi (pentru a curata orfanii)...")
     Restaurant.objects.all().delete()
     
     # Creăm un Owner care să primească restaurantele generate
@@ -44,7 +44,7 @@ def seed():
         owner.set_password('parola123')
         owner.save()
     
-    print("Începem generarea a 50 de restaurante...")
+    print("Incepem generarea a 50 de restaurante...")
     for i in range(1, 51):
         profil = random.choice(profiluri)
         nume = f"{profil['nume']} {random.choice(sufixe)} {i}"
@@ -61,7 +61,8 @@ def seed():
             telefon_contact=telefon,
             email_contact=email,
             descriere=descriere,
-            rating=rating
+            rating=rating,
+            is_approved="yes"
         )
         
         # Generăm meniul specific
@@ -70,8 +71,8 @@ def seed():
         for prep in preparate:
             MenuItem.objects.create(restaurant=rest, nume=prep[0], pret=prep[1], categorie=prep[2])
             
-    print("Gata! Cele 50 de restaurante au fost adăugate.")
-    print(f"** Poți testa Owner Dashboard logându-te cu: {owner_email} / parola123 **")
+    print("Gata! Cele 50 de restaurante au fost adaugate.")
+    print(f"** Poti testa Owner Dashboard logandu-te cu: {owner_email} / parola123 **")
 
 if __name__ == '__main__':
     seed()

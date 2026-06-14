@@ -5,7 +5,7 @@ import './App.css';
 function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isLoggedIn, isOwner, logout } = useAuth();
+  const { isLoggedIn, isOwner, isAdmin, logout } = useAuth();
   
 
   // Nu afișăm meniul pe paginile de login/register
@@ -56,8 +56,17 @@ function Navbar() {
         {/* Butonul de Dashboard apare DOAR dacă userul este owner */}
         {isOwner && (
           <Link to="/owner-dashboard" style={{ textDecoration: 'none' }}>
-            <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: '1px solid #E2001A', backgroundColor: location.pathname.includes('/dashboard') ? '#E2001A' : 'white', color: location.pathname.includes('/dashboard') ? 'white' : '#E2001A', fontWeight: 'bold' }}>
+            <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: '1px solid #E2001A', backgroundColor: location.pathname.includes('/owner-dashboard') ? '#E2001A' : 'white', color: location.pathname.includes('/owner-dashboard') ? 'white' : '#E2001A', fontWeight: 'bold' }}>
               Restaurantele Mele
+            </button>
+          </Link>
+        )}
+
+        {/* Butonul de Admin Dashboard apare DOAR dacă userul este admin */}
+        {isLoggedIn && isAdmin === 'yes' && (
+          <Link to="/admin-dashboard" style={{ textDecoration: 'none' }}>
+            <button style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '8px', border: '1px solid #E2001A', backgroundColor: location.pathname === '/admin-dashboard' ? '#E2001A' : 'white', color: location.pathname === '/admin-dashboard' ? 'white' : '#E2001A', fontWeight: 'bold' }}>
+              Admin Dashboard
             </button>
           </Link>
         )}

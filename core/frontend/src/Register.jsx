@@ -67,6 +67,7 @@ function Register() {
         localStorage.setItem('token', data.token);
         localStorage.setItem('isOwner', data.isOwner);
         localStorage.setItem('userEmail', data.email);
+        localStorage.setItem('isAdmin', 'no');
         navigate('/register-success');
       } else {
         setError(data.error || 'Eroare la crearea contului. Încearcă din nou.');

@@ -7,7 +7,7 @@ from django.db import IntegrityError
 from django.core import signing
 import jwt
 from django.conf import settings
-from .models import UserProfile, Restaurant, MenuItem, Reservation, UserInteraction
+from .models import UserProfile, Restaurant, MenuItem, Reservation, UserInteraction, BannedRestaurant
 from datetime import datetime, timedelta, timezone
 import time
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
@@ -68,10 +68,18 @@ def api_login(request):
                     
                 # Verificăm strict dacă ACEST user are un restaurant înregistrat
                 is_owner = Restaurant.objects.filter(owner=user).exists()
+                
+                try:
+                    profile = user.userprofile
+                    is_admin = profile.is_admin
+                except UserProfile.DoesNotExist:
+                    is_admin = 'no'
+
                 return JsonResponse({
                     'message': 'Login successful', 
                     'email': user.email,
                     'isOwner': is_owner,
+                    'isAdmin': is_admin,
                     'token': token
                 })
             else:
@@ -197,7 +205,8 @@ def api_register(request):
                 'message': 'Cont creat cu succes', 
                 'email': user.email,
                 'token': token,
-                'isOwner': False
+                'isOwner': False,
+                'isAdmin': 'no'
             })
 
         except IntegrityError:
@@ -208,7 +217,7 @@ def api_register(request):
 
 def api_get_restaurants(request):
     if request.method == 'GET':
-        restaurants = Restaurant.objects.all().values('id', 'nume', 'adresa', 'rating', 'descriere')
+        restaurants = Restaurant.objects.filter(is_approved='yes').values('id', 'nume', 'adresa', 'rating', 'descriere')
         return JsonResponse(list(restaurants), safe=False)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -216,6 +225,17 @@ def api_get_restaurant_details(request, pk):
     if request.method == 'GET':
         try:
             restaurant = Restaurant.objects.get(pk=pk)
+            if restaurant.is_approved != 'yes':
+                user = get_user_from_token(request)
+                is_admin_flag = False
+                if user:
+                    try:
+                        is_admin_flag = user.userprofile.is_admin == 'yes'
+                    except UserProfile.DoesNotExist:
+                        pass
+                if not user or (restaurant.owner != user and not is_admin_flag):
+                    return JsonResponse({'error': 'Acest restaurant nu este aprobat încă.'}, status=403)
+
             menu_items = MenuItem.objects.filter(restaurant=restaurant).values('id', 'nume', 'pret', 'categorie')
             
             data = {
@@ -239,7 +259,7 @@ def api_owner_restaurants(request):
         return JsonResponse({'error': 'Neautorizat'}, status=401)
         
     if request.method == 'GET':
-        restaurants = Restaurant.objects.filter(owner=user).values('id', 'nume', 'adresa', 'rating')
+        restaurants = Restaurant.objects.filter(owner=user).values('id', 'nume', 'adresa', 'rating', 'is_approved')
         return JsonResponse(list(restaurants), safe=False)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 

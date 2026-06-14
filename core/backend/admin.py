@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, Restaurant
+from .models import UserProfile, Restaurant, BannedRestaurant
 
 # Register your models here.
 
@@ -12,3 +12,8 @@ class UserProfileAdmin(admin.ModelAdmin):
 class RestaurantAdmin(admin.ModelAdmin):
     list_display = ('nume', 'adresa', 'email_contact', 'rating', 'created_at')
     search_fields = ('nume', 'adresa', 'email_contact')
+
+@admin.register(BannedRestaurant)
+class BannedRestaurantAdmin(admin.ModelAdmin):
+    list_display = ('nume', 'adresa', 'created_at')
+    search_fields = ('nume', 'adresa')

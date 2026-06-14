@@ -60,10 +60,24 @@ function OwnerDashboard() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
           {restaurants.map((rest) => (
-            <div key={rest.id} onClick={() => navigate(`/dashboard/${rest.id}`)} style={{ backgroundColor: '#fff', border: '1px solid #e5e5e5', borderRadius: '15px', padding: '20px', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-              <h3 style={{ margin: '0 0 10px 0', color: '#1a1a1a' }}>{rest.nume}</h3>
-              <p style={{ margin: '0 0 15px 0', color: '#666', fontSize: '0.9rem' }}>📍 {rest.adresa}</p>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div key={rest.id} onClick={() => navigate(`/dashboard/${rest.id}`)} style={{ backgroundColor: '#fff', border: '1px solid #e5e5e5', borderRadius: '15px', padding: '20px', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '160px' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                  <h3 style={{ margin: '0 0 10px 0', color: '#1a1a1a' }}>{rest.nume}</h3>
+                  <span style={{ 
+                    padding: '4px 10px', 
+                    borderRadius: '20px', 
+                    fontSize: '0.8rem', 
+                    fontWeight: 'bold', 
+                    backgroundColor: rest.is_approved === 'yes' ? '#2ecc71' : '#f1c40f', 
+                    color: '#fff'
+                  }}>
+                    {rest.is_approved === 'yes' ? 'Aprobat' : 'În așteptare'}
+                  </span>
+                </div>
+                <p style={{ margin: '0 0 15px 0', color: '#666', fontSize: '0.9rem' }}>📍 {rest.adresa}</p>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
                 <span style={{ color: '#E2001A', fontWeight: 'bold', fontSize: '0.9rem' }}>Gestionează &rarr;</span>
               </div>
             </div>

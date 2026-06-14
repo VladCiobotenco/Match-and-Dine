@@ -13,6 +13,7 @@ import FoodTinder from './FoodTinder';
 import MyReservations from './MyReservations';
 import About from './About';
 import UserProfile from './UserProfile';
+import AdminDashboard from './AdminDashboard';
 import { AuthProvider } from './AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
@@ -37,6 +38,7 @@ function AnimatedRoutes() {
         <Route path="/food-tinder" element={<PageWrapper><FoodTinder /></PageWrapper>} />
         <Route path="/my-reservations" element={<PageWrapper><MyReservations /></PageWrapper>} />
         <Route path="/profile" element={<PageWrapper><UserProfile /></PageWrapper>} />
+        <Route path="/admin-dashboard" element={<PageWrapper><AdminDashboard /></PageWrapper>} />
         <Route path="/about" element={<About />} />
         
         <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
