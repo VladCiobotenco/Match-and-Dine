@@ -1,0 +1,57 @@
+name: Match-and-Dine CI Pipeline
+
+# Acest workflow se va declanșa la fiecare Push pe ramura principală (main/master)
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Copiază codul tău pe serverul virtual
+      - name: Checkout cod
+        uses: actions/checkout@v4
+
+      # 2. Setează Python pentru Backend
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 3. Instalează dependențele Django și rulează Pytest
+      - name: Install Backend & Run Pytest
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-django python-dotenv google-generativeai
+          cd core
+          pytest
+        env:
+          SECRET_KEY: 'cheie-falsa-github-actions'
+          GEMINI_API_KEY: 'cheie-falsa'
+
+      # 4. Setează Node.js pentru Frontend
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 5. Instalează pachetele de React și rulează Vitest
+      - name: Install Frontend & Run Vitest
+        run: |
+          cd core/frontend
+          npm ci
+          npm run test -- --run
+
+      # 6. Pornește aplicația și rulează Cypress (Teste E2E)
+      - name: Run Cypress E2E Tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: core/frontend
+          start: npm run dev
+          wait-on: 'http://localhost:5173'
+          wait-on-timeout: 60
