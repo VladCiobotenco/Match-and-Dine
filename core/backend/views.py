@@ -709,7 +709,8 @@ def api_get_profile(request):
                 'gastronomie_preferata': profile.gastronomie_preferata or '',
                 'fel_de_mancare_preferat': profile.fel_de_mancare_preferat or '',
                 'bautura_preferata': profile.bautura_preferata or '',
-                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M') if user.date_joined else ''
+                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M') if user.date_joined else '',
+                'is_admin': profile.is_admin
             }
             return JsonResponse(data)
         except UserProfile.DoesNotExist:
@@ -725,7 +726,8 @@ def api_get_profile(request):
                 'gastronomie_preferata': '',
                 'fel_de_mancare_preferat': '',
                 'bautura_preferata': '',
-                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M') if user.date_joined else ''
+                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M') if user.date_joined else '',
+                'is_admin': profile.is_admin
             }
             return JsonResponse(data)
             
