@@ -10,9 +10,13 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM 2. Create a virtual environment
-echo --- Creating Python virtual environment in 'venv' ---
-python -m venv venv
+REM 2. Create a virtual environment (if it doesn't already exist)
+if exist venv (
+    echo --- Virtual environment already exists. Skipping creation. ---
+) else (
+    echo --- Creating Python virtual environment in 'venv' ---
+    python -m venv venv
+)
 
 REM 3. Install Python dependencies
 echo --- Installing Python dependencies from requirements.txt ---

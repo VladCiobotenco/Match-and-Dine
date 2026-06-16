@@ -10,9 +10,13 @@ then
     exit 1
 fi
 
-# 2. Create a virtual environment
-echo "--- Creating Python virtual environment in 'venv' ---"
-python3 -m venv venv
+# 2. Create a virtual environment (if it doesn't already exist)
+if [ -d "venv" ]; then
+    echo "--- Virtual environment already exists. Skipping creation. ---"
+else
+    echo "--- Creating Python virtual environment in 'venv' ---"
+    python3 -m venv venv
+fi
 
 # 3. Install Python dependencies
 echo "--- Installing Python dependencies from requirements.txt ---"
