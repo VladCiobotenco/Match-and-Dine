@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db import IntegrityError
+from django.db.models import F
 from django.core import signing
 import jwt
 from django.conf import settings
@@ -225,8 +226,8 @@ def api_get_restaurant_details(request, pk):
     if request.method == 'GET':
         try:
             restaurant = Restaurant.objects.get(pk=pk)
+            user = get_user_from_token(request)
             if restaurant.is_approved != 'yes':
-                user = get_user_from_token(request)
                 is_admin_flag = False
                 if user:
                     try:
@@ -236,8 +237,12 @@ def api_get_restaurant_details(request, pk):
                 if not user or (restaurant.owner != user and not is_admin_flag):
                     return JsonResponse({'error': 'Acest restaurant nu este aprobat încă.'}, status=403)
 
+            # Nu contorizăm vizualizările proprietarului pe propriul restaurant
+            if not user or restaurant.owner != user:
+                Restaurant.objects.filter(pk=restaurant.pk).update(profile_views=F('profile_views') + 1)
+
             menu_items = MenuItem.objects.filter(restaurant=restaurant).values('id', 'nume', 'pret', 'categorie')
-            
+
             data = {
                 'id': restaurant.id,
                 'nume': restaurant.nume,
@@ -278,10 +283,13 @@ def api_dashboard_stats(request):
         return JsonResponse({'error': 'Restaurantul nu a fost găsit sau nu îți aparține.'}, status=403)
         
     if request.method == 'GET':
+        interactions = UserInteraction.objects.filter(restaurant=restaurant)
+        # "Vizualizări" = card-uri swipe-uite în deck + accesări ale profilului detaliat
         return JsonResponse({
             'nume': restaurant.nume,
-            'views': 0,
-            'matches': 0
+            'views': interactions.count() + restaurant.profile_views,
+            'matches': interactions.filter(action='LIKE').count(),
+            'rating': restaurant.rating
         })
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -342,11 +350,12 @@ def api_reservations(request):
         return JsonResponse({'error': 'Restaurantul nu a fost găsit sau nu îți aparține.'}, status=403)
 
     if request.method == 'GET':
+        from django.utils import timezone as django_timezone
         rezervari = Reservation.objects.filter(restaurant=restaurant).order_by('-data_timp')
         formatted = [{
             'id': r.id,
             'numeClient': r.nume_client,
-            'data': r.data_timp.strftime("%d/%m/%Y, %H:%M"),
+            'data': django_timezone.localtime(r.data_timp).strftime("%d/%m/%Y, %H:%M"),
             'persoane': r.numar_persoane,
             'status': r.status
         } for r in rezervari]
@@ -355,11 +364,28 @@ def api_reservations(request):
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 def api_reservation_detail(request, res_id):
+    user = get_user_from_token(request)
+    if not user:
+        return JsonResponse({'error': 'Neautorizat'}, status=401)
+
+    restaurant_id = request.headers.get('X-Restaurant-ID')
+    if restaurant_id:
+        restaurant = Restaurant.objects.filter(owner=user, id=restaurant_id).first()
+    else:
+        restaurant = Restaurant.objects.filter(owner=user).first()
+
+    if not restaurant:
+        return JsonResponse({'error': 'Restaurantul nu a fost găsit sau nu îți aparține.'}, status=403)
+
     if request.method == 'PATCH':
         try:
             data = json.loads(request.body)
             nou_status = data.get('status')
-            Reservation.objects.filter(id=res_id).update(status=nou_status)
+            rezervare = Reservation.objects.filter(id=res_id, restaurant=restaurant).first()
+            if not rezervare:
+                return JsonResponse({'error': 'Rezervarea nu a fost găsită sau nu îți aparține.'}, status=404)
+            rezervare.status = nou_status
+            rezervare.save()
             return JsonResponse({'message': 'Status actualizat cu succes'})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
@@ -542,8 +568,10 @@ def api_create_reservation(request, pk):
             ora_rez = data.get('ora') # HH:MM
             if not data_rez or not ora_rez: return JsonResponse({'error': 'Data și ora sunt obligatorii'}, status=400)
                 
-            data_timp_obj = datetime.strptime(f"{data_rez}T{ora_rez}:00", "%Y-%m-%dT%H:%M:%S")
-            
+            from django.utils import timezone as django_timezone
+            data_timp_naiv = datetime.strptime(f"{data_rez}T{ora_rez}:00", "%Y-%m-%dT%H:%M:%S")
+            data_timp_obj = django_timezone.make_aware(data_timp_naiv)
+
             Reservation.objects.create(
                 restaurant=restaurant, user=user,
                 nume_client=f"{user.first_name} {user.last_name}".strip() or user.username,
@@ -562,7 +590,7 @@ def api_user_reservations(request):
         now = timezone.now()
         rez_list = [{
             'id': r.id, 'restaurant_nume': r.restaurant.nume,
-            'data_timp': r.data_timp.strftime("%d/%m/%Y %H:%M"),
+            'data_timp': timezone.localtime(r.data_timp).strftime("%d/%m/%Y %H:%M"),
             'persoane': r.numar_persoane, 'status': r.status,
             'poate_da_rating': (r.status == 'Confirmat' and r.data_timp < now and r.nota_acordata is None),
             'nota_acordata': r.nota_acordata
