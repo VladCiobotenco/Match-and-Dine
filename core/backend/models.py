@@ -25,6 +25,7 @@ class Restaurant(models.Model):
     email_contact = models.EmailField(unique=True)
     descriere = models.TextField(blank=True, null=True)
     rating = models.FloatField(default=0.0)
+    profile_views = models.IntegerField(default=0)
     is_approved = models.CharField(max_length=10, default="no")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

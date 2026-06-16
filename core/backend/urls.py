@@ -11,6 +11,7 @@ urlpatterns = [
     path('menu/', views.api_menu),
     path('menu/<int:item_id>/', views.api_menu_detail),
     path('reservations/', views.api_reservations),
+    path('reservations/<int:res_id>/', views.api_reservation_detail, name='api_reservation_detail'),
     path('generate-description/', views.api_generate_description, name='api_generate_description'),
     path('owner-restaurants/', views.api_owner_restaurants, name='api_owner_restaurants'),
     path('password-reset/', views.api_password_reset_request, name='password_reset_request'),

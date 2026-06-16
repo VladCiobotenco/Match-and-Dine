@@ -140,6 +140,10 @@ function Dashboard() {
                 <h3>Rezervări Noi</h3>
                 <div className="value">{reservations.filter(r => r.status === 'Așteptare').length}</div>
               </div>
+              <div className="stat-card">
+                <h3>Rating</h3>
+                <div className="value">⭐ {restaurantData?.rating ?? 0}</div>
+              </div>
             </div>
             <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '30px' }}>
               <h2>Activitate Recentă</h2>
