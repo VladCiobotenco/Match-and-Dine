@@ -1,55 +1,315 @@
 # Match-and-Dine
 
-This document provides instructions for setting up and running the Match-and-Dine project.
+Match-and-Dine is a modern web application that simplifies the dining experience by matching hungry foodies with their ideal restaurants. It combines interactive social features with reservation systems and AI-powered recommendations.
 
-## Prerequisites
+---
 
-Before you begin, ensure you have the following installed on your system:
-- [Python 3.8+](https://www.python.org/downloads/)
-- [Node.js and npm](https://nodejs.org/en/download/) (LTS version is recommended)
+## 🍽️ Overview + App Role
 
-## Project Setup
+### Purpose of the Application
+Match-and-Dine is designed to solve the age-old dilemma of deciding where to eat. By bringing a gamified swiping interface to food discovery, the application allows users to quickly browse local restaurants, swipe right on what appeals to them, and book table reservations instantly. For restaurant owners, it provides a portal to list their venues, update menu items, manage incoming reservations, and grow their customer base directly.
 
-To get the project dependencies installed and ready for development, run the setup script appropriate for your operating system from the project root.
+### Why Match-and-Dine is Different
+Unlike traditional directory sites (like Yelp or TripAdvisor) which require manual searching, reading through lengthy reviews, and navigating cluttered interfaces, Match-and-Dine turns restaurant discovery into an interactive, Tinder-like experience. Backed by state-of-the-art Generative AI models, the app scores and serves customized restaurant decks based on specific cravings or natural language prompts (e.g., "I want a cozy Italian place for pasta"), making food selection personal, dynamic, and fun.
 
-### For Windows Users
+---
 
+## 📋 Backlogs
+
+### Agile Methodology & Backlogs
+To develop the application efficiently and adapt to changing user feedback, our development team followed the Agile methodology. We structured our development cycles into iterative sprints and relied heavily on backlogs to organize user stories, prioritize bug fixes, and manage upcoming features. This structured workflow allowed us to deliver value incrementally and smoothly implement features like real-time swiping and automatic description generation.
+
+### Backlog Ideas Placeholder
+> [!NOTE]
+> **Product Backlog & Future Iterations Placeholder**
+> *   [ ] Implement real-time notifications for reservation status updates.
+> *   [ ] Integrate interactive mapping (e.g., Google Maps API) to show nearby matches.
+> *   [ ] Add group swiping rooms where friends or couples can swipe together to find a mutual dining match.
+> *   [ ] Build a comprehensive dietary/allergy filter system.
+
+---
+
+## 🏗️ Architecture of the Entire Project
+
+The application is split into a modern decoupled architecture, combining a React frontend with a Django REST API backend.
+
+```mermaid
+graph TD
+    subgraph Client ["Client Portal (React + Vite)"]
+        UI(["User Interface / React Components"])
+        AuthCtx[["Auth Context / Local Storage"]]
+        UI --> AuthCtx
+    end
+
+    subgraph Server ["Server Core (Django)"]
+        Routing{"URLs Router / urls.py"}
+        Views[["API Views / views.py"]]
+        Models["Django ORM Models / models.py"]
+        Routing --> Views
+        Views --> Models
+    end
+
+    subgraph Storage ["Persistent Storage"]
+        SQLite[("(SQLite Database) <br/> db.sqlite3")]
+        Models --> SQLite
+    end
+
+    subgraph AI ["AI Services & Agents"]
+        GeminiAgent{{"Gemini Recommendation Agent<br/>gemini-3.5-flash"}}
+        ColabAgent{{"AI Description Generator Agent<br/>Colab + ngrok Service"}}
+    end
+
+    %% Communication paths
+    UI -- "HTTP Requests with JWT Bearer Token" --> Routing
+    Views -- "Sends context & gets matches" --> GeminiAgent
+    Views -- "Sends metadata & gets description" --> ColabAgent
+
+    %% Style definitions
+    classDef clientStyle fill:#e0f7fa,stroke:#00acc1,stroke-width:2px,color:#006064;
+    classDef serverStyle fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px,color:#4a148c;
+    classDef storageStyle fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#1b5e20;
+    classDef aiStyle fill:#fff3e0,stroke:#fb8c00,stroke-width:2px,color:#e65100;
+
+    class UI,AuthCtx clientStyle;
+    class Routing,Views,Models serverStyle;
+    class SQLite storageStyle;
+    class GeminiAgent,ColabAgent aiStyle;
+```
+
+### Frontend Framework
+The frontend is built using **React** powered by **Vite** for optimized building and hot-module replacement. 
+*   **Communication with Backend**: The client application communicates asynchronously with the backend by executing HTTP requests via the browser's standard `fetch` API. Secure endpoints are protected using JWT (JSON Web Tokens). The frontend automatically extracts the token from `localStorage` and embeds it in the `Authorization` header as a `Bearer` token for authorized API calls.
+
+### Backend Framework
+The backend is built using the **Django** framework.
+*   **Exposed Endpoints**: API endpoints are exposed through routing configuration in `core/backend/urls.py`, mapping specific request paths to Django views (in `core/backend/views.py`) that handle business logic, authenticate requests, and output JSON responses.
+*   **Communication with Database**: Django's built-in **Object-Relational Mapper (ORM)** acts as the bridge between Python code and the SQLite database (`core/db.sqlite3`). SQL operations are abstracted through database models, facilitating transactions, migrations, and model relationships.
+
+### Class Diagram (Django Models)
+
+```mermaid
+classDiagram
+    class User {
+        +int id
+        +string username
+        +string email
+        +string password
+        +boolean is_staff
+        +boolean is_superuser
+    }
+
+    class UserProfile {
+        +int id
+        +string nume
+        +string prenume
+        +string email
+        +string telefon
+        +string gastronomie_preferata
+        +string fel_de_mancare_preferat
+        +string bautura_preferata
+        +string is_admin
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    class Restaurant {
+        +int id
+        +string nume
+        +string adresa
+        +string telefon_contact
+        +string email_contact
+        +string descriere
+        +float rating
+        +string is_approved
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    class MenuItem {
+        +int id
+        +string nume
+        +decimal pret
+        +string categorie
+    }
+
+    class Reservation {
+        +int id
+        +string nume_client
+        +datetime data_timp
+        +int numar_persoane
+        +string status
+        +int nota_acordata
+        +datetime created_at
+    }
+
+    class UserInteraction {
+        +int id
+        +string action
+        +int match_score
+        +datetime created_at
+    }
+
+    class BannedRestaurant {
+        +int id
+        +string nume
+        +string adresa
+        +datetime created_at
+    }
+
+    UserProfile --> User : One-to-One
+    Restaurant --> User : ForeignKey (owner)
+    MenuItem --> Restaurant : ForeignKey (restaurant)
+    Reservation --> Restaurant : ForeignKey (restaurant)
+    Reservation --> User : ForeignKey (user, client)
+    UserInteraction --> User : ForeignKey
+    UserInteraction --> Restaurant : ForeignKey
+```
+
+---
+
+## 🤖 AI Agents
+
+> [!NOTE]
+> **AI Agents & Integrations Placeholder**
+> *   **Gemini Swiping Assistant**: Uses the `gemini-3.5-flash` model to analyze restaurant details, reviews, and menus dynamically, calculating matching scores based on user prompts.
+> *   **Colab Description Generator**: Offloads description generation tasks to a Google Colab notebook exposed via ngrok to produce high-quality, personalized copywriting for restaurants.
+
+---
+
+## 🌐 Deployment and Infrastructure
+
+To transition the project from local development to production, we plan to use a modern, scalable cloud hosting architecture.
+
+### Future Deployment Strategy
+*   **Vite Frontend Hosting**: Hosted on **Vercel** as a static, global CDN deployment to ensure super-fast delivery and automatic previews.
+*   **Django Backend Hosting**: Hosted on **Render** as a persistent web service using Gunicorn.
+*   **Production Database**: A managed **Vercel Postgres** (PostgreSQL) database instance. The Django backend on Render will connect securely to this database.
+*   **AI Agent Deployment Solution**:
+    *   **Gemini Swiping Assistant**: The API key will be configured as a secure environment variable on Render, enabling direct and authenticated communication from Django to the Google AI API.
+    *   **Colab Description Agent**: To replace the temporary development-time Colab+ngrok tunnel, the description generator can be deployed on a dedicated GPU instance (such as a RunPod, AWS EC2 G-series instance, or Render background worker running a lightweight PyTorch/Transformers image) to ensure high availability and steady response times.
+
+### Future Deployment Architecture
+
+```mermaid
+graph TB
+    subgraph VercelHost ["Vercel Hosting Platform"]
+        ViteApp(["Vite Frontend App <br/> (Static Web CDN)"])
+        Postgres[("(Vercel Postgres) <br/> PostgreSQL Database")]
+    end
+
+    subgraph RenderHost ["Render Cloud Platform"]
+        DjangoApp[["Django Backend API <br/> (Web Service / Gunicorn)"]]
+    end
+
+    subgraph ExternalAI ["AI Services"]
+        Gemini{{"Gemini API <br/> gemini-3.5-flash"}}
+        ColabServer{{"Colab Agent Host <br/> (Dedicated VM / Serverless GPU)"}}
+    end
+
+    %% Client access
+    UserBrowser(["User Web Browser"]) -->|HTTPS| ViteApp
+    UserBrowser -->|HTTPS API Requests| DjangoApp
+
+    %% Platform communication
+    DjangoApp -->|Database Connection| Postgres
+    DjangoApp -->|Secure API Requests| Gemini
+    DjangoApp -->|ngrok Tunnel / API Calls| ColabServer
+
+    %% Styles
+    classDef vercelStyle fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px,color:#1a237e;
+    classDef renderStyle fill:#efebe9,stroke:#8d6e63,stroke-width:2px,color:#3e2723;
+    classDef aiStyle fill:#fff3e0,stroke:#fb8c00,stroke-width:2px,color:#e65100;
+    classDef browserStyle fill:#e0f2f1,stroke:#009688,stroke-width:2px,color:#004d40;
+
+    class ViteApp,Postgres vercelStyle;
+    class DjangoApp renderStyle;
+    class Gemini,ColabServer aiStyle;
+    class UserBrowser browserStyle;
+```
+
+---
+
+## ⚙️ Project Setup
+
+Follow these instructions to set up and run the Match-and-Dine project locally.
+
+### Prerequisites
+
+Ensure you have the following installed:
+*   [Python 3.8+](https://www.python.org/downloads/)
+*   [Node.js and npm](https://nodejs.org/en/download/) (LTS recommended)
+
+### Setup Installation
+
+To install project dependencies, run the setup script matching your operating system from the project root:
+
+#### For Windows Users
 Open a Command Prompt or PowerShell and run:
 ```shell
 setup.bat
 ```
 
-### For macOS and Linux Users
-
-Open your terminal, make the script executable, and then run it:
+#### For macOS and Linux Users
+Open your terminal, make the script executable, and run it:
 ```shell
 chmod +x setup.sh
 ./setup.sh
 ```
 
-These scripts will perform the following actions:
-1.  Create a Python virtual environment in a `venv` directory.
-2.  Install the required Python packages from `requirements.txt`.
-3.  Install the frontend Node.js dependencies from `core/frontend/package.json`.
+These scripts will:
+1. Create a Python virtual environment in a `venv` directory.
+2. Install python packages from `requirements.txt`.
+3. Install frontend Node.js packages in `core/frontend`.
 
-## Running the Application
+### Environment Configuration
 
-After the setup is complete, you must activate the virtual environment before running the application.
+The application requires a `.env` file to be created in the project root directory (the same directory where this `README.md` file is located). This file is used to store environment variables such as the Google Gemini API key.
 
-1.  **Activate the virtual environment:**
-    -   On Windows: `venv\Scripts\activate`
-    -   On macOS/Linux: `source venv/bin/activate`
+Create a file named `.env` in the root directory and add the following content:
 
-2.  **Run the Django development server:**
+```env
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
+```
+
+---
+
+## 🚀 Running the Application
+
+You can start both the Django backend and Vite frontend servers simultaneously using the provided startup scripts from the root directory:
+
+### For Windows Users
+Run the batch file in Command Prompt or PowerShell:
+```shell
+run.bat
+```
+
+### For macOS and Linux Users
+Make the shell script executable (if not already) and run it:
+```shell
+chmod +x run.sh
+./run.sh
+```
+
+---
+
+### Alternative: Running Manually
+
+If you prefer to run the servers in separate terminals manually:
+
+1.  **Activate the virtual environment**:
+    *   On Windows: `venv\Scripts\activate`
+    *   On macOS/Linux: `source venv/bin/activate`
+
+2.  **Run the Django backend server**:
     ```shell
     python core/manage.py runserver
     ```
     The backend API will be available at `http://127.0.0.1:8000/`.
 
-3.  **Run the frontend development server:**
-    In a **new terminal**, navigate to the frontend directory and start its development server.
+3.  **Run the frontend development server**:
+    Open a **new terminal**, navigate to the frontend directory, and run:
     ```shell
     cd core/frontend
     npm run dev
     ```
-    The frontend will be accessible in your browser (check the terminal output for the exact URL, usually `http://localhost:3000`).
+    The frontend will be accessible at the URL printed in the console (usually `http://localhost:5173`).
