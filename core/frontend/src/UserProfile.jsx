@@ -13,7 +13,8 @@ function UserProfile() {
     gastronomie_preferata: '',
     fel_de_mancare_preferat: '',
     bautura_preferata: '',
-    date_joined: ''
+    date_joined: '',
+    is_admin: "no" 
   });
   
   const [isLoading, setIsLoading] = useState(true);
@@ -98,19 +99,35 @@ function UserProfile() {
         }}>
           <div style={{ fontSize: '4.5rem', marginBottom: '15px' }}>👤</div>
           <h2 style={{ margin: '0 0 5px 0', fontSize: '1.6rem', color: '#1a1a1a' }}>Profilul Meu</h2>
-          <span style={{ 
-            display: 'inline-block',
-            padding: '5px 12px',
-            borderRadius: '20px',
-            fontSize: '0.85rem',
-            fontWeight: 'bold',
-            backgroundColor: isOwner ? '#fff3cd' : '#d1ecf1',
-            color: isOwner ? '#856404' : '#0c5460',
-            marginTop: '5px',
-            marginBottom: '20px'
-          }}>
-            {isOwner ? '👑 Partener / Owner' : '🍽️ Client (Foodie)'}
-          </span>
+          {profileData.is_admin === 'yes' ? (
+            <span style={{
+              display: 'inline-block',
+              padding: '5px 12px',
+              borderRadius: '20px',
+              fontSize: '0.85rem',
+              fontWeight: 'bold',
+              backgroundColor: '#d4edda',
+              color: '#155724',
+              marginTop: '5px',
+              marginBottom: '20px'
+            }}>
+              🛡️ Admin
+            </span>
+          ) : (
+            <span style={{ 
+              display: 'inline-block',
+              padding: '5px 12px',
+              borderRadius: '20px',
+              fontSize: '0.85rem',
+              fontWeight: 'bold',
+              backgroundColor: isOwner ? '#fff3cd' : '#d1ecf1',
+              color: isOwner ? '#856404' : '#0c5460',
+              marginTop: '5px',
+              marginBottom: '20px'
+            }}>
+              {isOwner ? '👑 Partener / Owner' : '🍽️ Client (Foodie)'}
+            </span>
+          )}
           <div style={{ fontSize: '0.85rem', color: '#666', borderTop: '1px solid #eee', paddingTop: '15px', width: '100%' }}>
             <strong>Membru din:</strong>
             <div style={{ marginTop: '5px', color: '#333', fontWeight: 'bold' }}>{profileData.date_joined || 'N/A'}</div>
