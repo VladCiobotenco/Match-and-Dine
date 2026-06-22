@@ -176,6 +176,160 @@ classDiagram
 
 ---
 
+## 🗺️ Use-Case Diagrams
+
+Below are the use-case diagrams for the Match-and-Dine system, separated by user role to enhance visibility.
+
+### 👤 Visitor Use Cases (Unauthenticated User)
+Covers authentication and password recovery workflows.
+
+```mermaid
+flowchart LR
+    %% Actors
+    Visitor["👤 Visitor<br/>(Unauthenticated)"]
+    Email["✉️ Email System<br/>(SMTP Service)"]
+
+    %% System Boundary
+    subgraph VisitorSystem ["Match-and-Dine (Auth Portal)"]
+        UC_Reg(["Register Account"])
+        UC_Log(["Log In"])
+        UC_ResetReq(["Request Password Reset"])
+        UC_ResetConf(["Confirm Password Reset"])
+    end
+
+    %% Connections
+    Visitor --> UC_Reg
+    Visitor --> UC_Log
+    Visitor --> UC_ResetReq
+    Visitor --> UC_ResetConf
+
+    UC_ResetReq --> Email
+
+    %% Styling
+    classDef actorStyle fill:#f5f5f7,stroke:#666,stroke-width:2px,color:#333;
+    classDef ucStyle fill:#e8f4fd,stroke:#1d8cf8,stroke-width:1.5px,color:#1d8cf8;
+    class Visitor actorStyle;
+    class UC_Reg,UC_Log,UC_ResetReq,UC_ResetConf ucStyle;
+```
+
+### 🍔 Foodie Use Cases (Authenticated User)
+Covers culinary discovery, swiping, matching, and table booking.
+
+```mermaid
+flowchart LR
+    %% Actors
+    Foodie["🍔 Foodie / Client<br/>(Authenticated)"]
+    Gemini["🤖 Gemini AI<br/>(Recommendation Engine)"]
+
+    %% System Boundary
+    subgraph FoodieSystem ["Match-and-Dine (Discovery Portal)"]
+        UC_Profile(["Manage User Profile"])
+        UC_BrowseRes(["Browse Restaurants"])
+        UC_GetDeck(["Get Custom Swipe Deck"])
+        UC_Swipe(["Swipe (Like / Reject)"])
+        UC_Matches(["View Matches"])
+        UC_ResetSwipes(["Reset Swipe History"])
+        UC_BookRes(["Book Table Reservation"])
+        UC_UserReservations(["View Reservation History"])
+        UC_RateRes(["Rate Dining Experience"])
+    end
+
+    %% Connections
+    Foodie --> UC_Profile
+    Foodie --> UC_BrowseRes
+    Foodie --> UC_GetDeck
+    Foodie --> UC_Swipe
+    Foodie --> UC_Matches
+    Foodie --> UC_ResetSwipes
+    Foodie --> UC_BookRes
+    Foodie --> UC_UserReservations
+    Foodie --> UC_RateRes
+
+    %% Relationships
+    UC_Swipe -.->|"<<extends>>"| UC_GetDeck
+    UC_RateRes -.->|"<<includes>>"| UC_UserReservations
+    UC_GetDeck --> Gemini
+
+    %% Styling
+    classDef actorStyle fill:#f5f5f7,stroke:#666,stroke-width:2px,color:#333;
+    classDef ucStyle fill:#e8f4fd,stroke:#1d8cf8,stroke-width:1.5px,color:#1d8cf8;
+    class Foodie actorStyle;
+    class UC_Profile,UC_BrowseRes,UC_GetDeck,UC_Swipe,UC_Matches,UC_ResetSwipes,UC_BookRes,UC_UserReservations,UC_RateRes ucStyle;
+```
+
+### 👨‍🍳 Restaurant Owner Use Cases
+Covers restaurant registration, menu curation, statistics, and table bookings.
+
+```mermaid
+flowchart LR
+    %% Actors
+    Owner["👨‍🍳 Restaurant Owner<br/>(Authenticated)"]
+    Colab["⚡ Colab Worker<br/>(AI copywriting)"]
+
+    %% System Boundary
+    subgraph OwnerSystem ["Match-and-Dine (Owner Portal)"]
+        UC_RegRes(["Register Restaurant"])
+        UC_OwnerRes(["View Owned Restaurants"])
+        UC_ManageMenu(["Manage Menu Items"])
+        UC_GenDesc(["Generate AI Menu Description"])
+        UC_Stats(["View Dashboard Stats"])
+        UC_OwnerReservations(["Manage Incoming Reservations"])
+    end
+
+    %% Connections
+    Owner --> UC_RegRes
+    Owner --> UC_OwnerRes
+    Owner --> UC_ManageMenu
+    Owner --> UC_GenDesc
+    Owner --> UC_Stats
+    Owner --> UC_OwnerReservations
+
+    %% Relationships
+    UC_GenDesc -.->|"<<extends>>"| UC_ManageMenu
+    UC_GenDesc --> Colab
+
+    %% Styling
+    classDef actorStyle fill:#f5f5f7,stroke:#666,stroke-width:2px,color:#333;
+    classDef ucStyle fill:#e8f4fd,stroke:#1d8cf8,stroke-width:1.5px,color:#1d8cf8;
+    class Owner actorStyle;
+    class UC_RegRes,UC_OwnerRes,UC_ManageMenu,UC_GenDesc,UC_Stats,UC_OwnerReservations ucStyle;
+```
+
+### ⚙️ System Administrator Use Cases
+Covers restaurant validation, approvals, and blacklists.
+
+```mermaid
+flowchart LR
+    %% Actors
+    Admin["⚙️ System Admin<br/>(Staff Profile)"]
+
+    %% System Boundary
+    subgraph AdminSystem ["Match-and-Dine (Admin Portal)"]
+        UC_ViewPending(["View Pending Registrations"])
+        UC_ApproveRes(["Approve Restaurant"])
+        UC_BanRes(["Ban & Blacklist Restaurant"])
+        UC_ViewBanned(["View Blacklisted Restaurants"])
+    end
+
+    %% Connections
+    Admin --> UC_ViewPending
+    Admin --> UC_ApproveRes
+    Admin --> UC_BanRes
+    Admin --> UC_ViewBanned
+
+    %% Relationships
+    UC_ApproveRes -.->|"<<extends>>"| UC_ViewPending
+    UC_BanRes -.->|"<<extends>>"| UC_ViewPending
+
+    %% Styling
+    classDef actorStyle fill:#f5f5f7,stroke:#666,stroke-width:2px,color:#333;
+    classDef ucStyle fill:#e8f4fd,stroke:#1d8cf8,stroke-width:1.5px,color:#1d8cf8;
+    class Admin actorStyle;
+    class UC_ViewPending,UC_ApproveRes,UC_BanRes,UC_ViewBanned ucStyle;
+```
+
+---
+
 ## 🌐 Deployment and Infrastructure
 
 To transition the project from local development to production, we plan to use a modern, scalable cloud hosting architecture.
