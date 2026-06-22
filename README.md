@@ -171,10 +171,62 @@ classDiagram
 
 > [!NOTE]
 > **AI Agents & Integrations Placeholder**
-> *   **Gemini Swiping Assistant**: Uses the `gemini-3.5-flash` model to analyze restaurant details, reviews, and menus dynamically, calculating matching scores based on user prompts.
-> *   **Colab Description Generator**: Offloads description generation tasks to a Google Colab notebook exposed via ngrok to produce high-quality, personalized copywriting for restaurants.
+> * **Gemini Swiping Assistant**: Uses the `gemini-3.5-flash` model to analyze restaurant details, reviews, and menus dynamically, calculating matching scores based on user prompts.
+> * **Colab Description Generator**: Offloads description generation tasks to a flask server run on Google Colab exposed via ngrok to produce high-quality, personalized copywriting for restaurants.
 
 ---
+
+### 📝 Colab Description Generator: Architecture and Implementation
+
+**1. What does this AI do?**
+This agent takes primary data about a restaurant (name and cuisine/vibe) and automatically generates a short, coherent, and engaging description. To properly handle inputs from Romanian users, the pipeline uses the `deep-translator` library: it translates the received data into English to leverage the model's maximum capabilities, generates the text, and then translates the final description back into Romanian before sending it to the client.
+
+**2. The Training Process (Fine-Tuning)**
+For the AI to learn the exact structure and tone of the desired descriptions, it went through a Supervised Fine-Tuning (SFT) process.
+* **Base Model:** `google/gemma-2-2b-it` was used, a lightweight and fast model optimized for instruction following.
+* **Dataset:** The model was exposed to a JSONL file containing dozens of examples structured with `Instruction`, `Input` (name, cuisine), and `Output` (the ideal description).
+* **Resource Optimization (PEFT & Quantization):** To enable training on a free graphics card (T4 GPU), the model was loaded in a 4-bit format (`BitsAndBytesConfig`). The LoRA technique was used to train only a fraction of the model's parameters (`q_proj`, `k_proj`, etc.), massively reducing memory requirements.
+* **Storage:** The trained adapter was pushed publicly to the Hugging Face Hub (`Edy317/my_restaurant_aiv2`), allowing it to be downloaded later in just a few seconds.
+
+**3. Evaluation Metrics and Generalization Capacity**
+For a rigorous and scientifically valid evaluation, the model was tested exclusively on an unseen dataset from the training phase (avoiding Data Leakage or Overfitting). The mathematical scores obtained by comparing the generated texts with the ideal ones (*Ground Truth*) are:
+
+| Metric | Value | Technical Interpretation for Documentation |
+| :--- | :--- | :--- |
+| **BLEU** | `0.0543` | The value reflects a low exact match at the n-gram level, which is absolutely normal and expected in creative text generation tasks. This score demonstrates that the model does not mechanically copy templates, but formulates new sentences, showing lexical flexibility. |
+| **ROUGE-1** | `0.3394` | Indicates that ~34% of the unigrams (individual keywords, such as the venue name, cuisine type, or atmosphere elements) present in the ideal reference are successfully captured by the AI, ensuring high informational precision. |
+| **ROUGE-L** | `0.2972` | Measures the Longest Common Subsequence. A score of nearly 30% confirms the success of the SFT process; the model correctly assimilated the syntax and grammatical structure specific to a commercial description. |
+
+**4. Deployment (Flask & Ngrok)**
+To connect the model (Google Colab) to the web application (Django):
+* **Web Server (Flask):** Runs an application on port 5000, exposing the `/generate` endpoint capable of receiving POST requests (JSON with the restaurant's name and cuisine).
+* **Filtering:** To prevent "hallucinations", the code processes the generated text: it stops at the first "Enter" (newline), ignores unwanted markdown formatting, cuts out expressions like "Explanation:", and ensures the text stops cleanly at the last valid period.
+* **Public Tunnel (pyngrok):** Since the Google Colab virtual machine is completely isolated, `ngrok` is used to expose the Flask server on a public domain (e.g., `.ngrok-free.dev`). This URL acts as a temporary address to which the main backend can send data packets.
+
+---
+
+### 🧠 Gemini Swiping Assistant: Architecture and Implementation
+
+**1. What does this AI do?**
+Integrated directly into the application's logic (via the `api_swipe_deck` endpoint), this assistant takes the user's natural prompt (e.g., "I want something spicy" or "A good place for a date") and acts as an intelligent recommendation engine. Unlike a classic search through text filters that require exact word matches, Gemini semantically analyzes the information of each restaurant and generates a personalized feed (Tinder/Bumble style).
+
+**2. Data Pre-processing and Contextualization**
+To ensure a fluid and relevant experience, the Django backend sets the stage before querying the model:
+* **History Exclusion:** Queries the database (`UserInteraction`) to automatically exclude restaurants the user has already voted on ("swiped left/right"), preventing the display of duplicates.
+* **Data Serialization:** The available restaurants are aggregated into a structured JSON format containing the `id`, `name`, `description`, and an array with the items from the `menu`. This structure provides the AI with all the necessary context to make logical deductions (e.g., a restaurant that does not have its cuisine explicitly set as "Italian", but has "Spaghetti Carbonara" on the menu, will be recognized).
+
+**3. Prompt Engineering & Smart Filtering**
+The `gemini-3.5-flash` model is called via the `google.generativeai` SDK using a strictly controlled prompt:
+* **Semantic Analysis ("Smart Filtering"):** The AI receives clear instructions not to limit itself to keyword matching. It is instructed to deduce associations (e.g., recommending a taqueria if the user asks for Mexican food).
+* **Strict Limitation:** To optimize frontend performance, the AI selects a maximum of the 8 best matches. It completely eliminates restaurants that have no logical connection to the prompt.
+* **Match Score:** To intelligently sort the results, the model evaluates the match quality and assigns a score between 1 and 100 (90-100 for perfect matches, 70-89 for related associations).
+* **Format Forcing (JSON-only):** The AI is forbidden to return Markdown formatting or text like "Here are your recommendations". It is forced to respond strictly as a raw JSON array.
+
+**4. Post-processing and Feed Generation**
+To protect the application from potential formatting instabilities generated by the LLM:
+* The backend uses Regular Expressions (`re.search`) to strictly isolate the JSON sequence `[ ... ]` from the Gemini response.
+* Parsing extracts the `id`s and associates the `matchScore` with each one.
+* The system retrieves the validated restaurants directly from the database, injects the AI score, and returns the descendingly sorted array to the frontend interface to be displayed as interactive cards.
 
 ## 🗺️ Use-Case Diagrams
 
